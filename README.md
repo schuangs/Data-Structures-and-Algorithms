@@ -6,6 +6,15 @@ Implementations of **data structures** and **algorithms** using **C++** by *Junk
 ### pTime
 A simple tool using `std::chrono` to measure how long a program runs. And you can set multiple checkpoints conveniencely in a program.
 
+### myPrint
+Print vector in various mode to given ostream object.
+
+### mySwap
+Swap two elements in a vector.
+
+### myBubbleSort
+Bubble sort implementation.
+
 
 ### Selection Problem
 
@@ -13,3 +22,7 @@ A simple tool using `std::chrono` to measure how long a program runs. And you ca
 
 **Output:** 	the k-th largest number  of input 
 Using `std::priority_queue`.
+
+### myBraceChecker
+A simple tools to check brace balance of a file. 
+Using `std::stack`.
