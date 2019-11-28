@@ -12,6 +12,7 @@
 # include <string>
 # include <queue>
 # include <stack>
+# include <map>
 # include <ctime>
 # include <chrono>
 # include <iostream>
@@ -100,25 +101,26 @@ public:
 
 //
 // Print:
-//  Print a vector
-//    v                          - the vector need to print
-//    os                         - ostream object where the vector to be print to
+//  Print a container
+//    con                        - the container need to print
+//    os                         - ostream object where the container to be print to
 //    mode                       - "Normal" : print in one line
 //                                 "Vertical" : print one item a line
 //
-template <typename T>
-void myPrint(const vector<T> &v, std::ostream &os = std::cout, string mode = "Normal") {
+
+template <typename Container>
+void myPrint(const Container &con, std::ostream &os = std::cout, string mode = "Normal"){
     if ( mode == "Normal" ) {
         // "Normal" mode: print in the form as : [ a1, a2, a3, ... ]
         os << "[ ";
-        for (auto i = 0; i < v.size()-1; ++i)
-            os << v[i] << ", ";
-        os << v.back() << " ]" << endl;
+        for (auto itr = con.begin(); itr != con.end(); ++itr)
+            os << *itr << ", ";
+        os << con.back() << " ]" << endl;
     } else if ( mode == "Vertical" ) {
         // "Vertical" mode: print each item at a line
-        for (auto i = 0; i < v.size()-1; ++i)
-            os << v[i] << endl;
-        os << v.back() << endl;
+        for (auto itr = con.begin(); itr != con.end(); ++itr)
+            os << *itr << endl;
+        os << con.back() << endl;
     }
     return;
 }
@@ -232,6 +234,104 @@ void myBraceChecker(const string &fileName) {
         return;
     } else 
         cout << "Perfect!" << endl;
+}
+
+//
+//  Postfix calculator:
+//  Calculate an expression in postfix notation(reverse Polish notation).
+//
+double myPostfixCalculator(const string &postfix) {
+    std::stack<double> s;
+    string operand;
+    for (auto c : postfix){
+        // Push operands into stack
+        if ( !operand.empty() && ( c == '+' || c == '-' || c == '*' || c == '/' || c == ' ' ) ){
+            s.push(std::stod(operand));
+            operand.clear();
+        }
+        // Calculation
+        if ( c == '+' ){
+            double b = s.top(); s.pop();
+            double a = s.top(); s.pop();
+            s.push(a+b);
+        } else if ( c == '-' ){
+            double b = s.top(); s.pop();
+            double a = s.top(); s.pop();
+            s.push(a-b);
+        } else if ( c == '*' ){
+            double b = s.top(); s.pop();
+            double a = s.top(); s.pop();
+            s.push(a*b);
+        } else if ( c == '/' ){
+            double b = s.top(); s.pop();
+            if ( b == 0 ) {
+                cerr << "Denominator cannot be 0!" << endl;
+                return 0;
+            }
+            double a = s.top(); s.pop();
+            s.push(a/b);
+        } else if ( c != ' ' ) {
+            // Complete operands
+            operand.push_back(c);
+        }
+    }
+    return s.top();
+}
+
+//
+//  Infix calculator
+//  Convert an infix expression into postfix expression, then use myPostCalculator to calculate the value.
+//
+double myCalculator(const string &infix) {
+    std::vector<char> operatorList{'+','-','*','/','(',')', ' '};
+    std::map<char, unsigned> priority{
+        {'(', 100},
+        {'+', 1}, {'-', 1},
+        {'*', 2}, {'/', 2}
+    };
+    std::stack<char> s;
+    string postfix;
+    // Deal with prefix sign '+' and '-'
+    size_t i = 0;
+    string infixNew{infix};
+    while (i < infixNew.size() && infixNew[i] == ' ') ++i;
+    if (i >= infixNew.size()) return 0;
+    // Sign at the beginning of expression
+    if (infixNew[i] == '-' || infixNew[i] == '+')
+        infixNew.insert(i, 1,'0');
+    while (i < infixNew.size()-1){
+        // sign in the middle, '(-' and '(+'
+        if (infixNew[i] == '(' && (infixNew[i+1] == '-' || infixNew[i+1] == '+'))
+            infixNew.insert(i+1, 1,'0');
+        ++i;
+    }
+    // convert
+    for (auto c : infixNew){
+        if ( isdigit(c) || c == '.' ){
+            postfix.push_back(c);
+        } else {
+            postfix.push_back(' ');
+            if ( c == ' ' ) continue;
+            if ( c == ')' ){
+                while ( s.top() != '(' ){
+                    postfix.push_back(s.top());
+                    s.pop();
+                }
+                s.pop();
+            } else {
+                while ( !s.empty() && s.top() != '(' && priority[s.top()] >= priority[c] ){
+                    postfix.push_back(s.top());
+                    s.pop();
+                }
+                s.push(c);
+            }
+        }
+    }
+    while ( !s.empty() ){
+        postfix.push_back(s.top());
+        s.pop();
+    }
+    return myPostfixCalculator(postfix);
 }
 
 # endif

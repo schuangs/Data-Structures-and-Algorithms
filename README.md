@@ -4,7 +4,7 @@ Implementations of **data structures** and **algorithms** using **C++** by *Junk
 
 
 ### pTime
-A simple tool using `std::chrono` to measure how long a program runs. And you can set multiple checkpoints conveniencely in a program.
+A simple tool using `std::chrono` to measure how long a program runs. And you can set multiple checkpoints conveniently in a program.
 
 ### myPrint
 Print vector in various mode to given ostream object.
@@ -26,3 +26,9 @@ Using `std::priority_queue`.
 ### myBraceChecker
 A simple tools to check brace balance of a file. 
 Using `std::stack`.
+
+### myPostfixCalculator
+Using `std::stack` to calculate a postfix expression which is inputed as a std::string.
+### myCalculator
+Using `std::stack` to translate a infix expression into corresponding postfix expression.
+Then using `myPostfixCalculator()` to calculate the result.
