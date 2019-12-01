@@ -12,6 +12,17 @@ Print vector in various mode to given ostream object.
 ### mySwap
 Swap two elements in a vector.
 
+
+### myList
+Class template implementation of linked list. 
+But you cannot use iterator here. Use pointer to `myList<T>::node` instead.
+Pay special attention to friend declaration and class template.
+
+### myStack
+Use `std::vector` to implement stack data structure.
+### myQueue
+Use `std::vector` would be much too easy. Instead, I use circular fundamental array to implement queue.
+
 ### myBubbleSort
 Bubble sort implementation.
 

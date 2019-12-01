@@ -141,6 +141,297 @@ void mySwap (vector<T> &v, int a, int b) {
 }
 
 
+//
+// -------------------- Linear List --------------------
+//
+
+//
+//  Linked list implementation:
+//   Just one direction. And for briefness, I do not encapsulate node, and it is visible to users.
+//   In fact, I could make it more professional if I encapsulate node and create an iterator class for node reference.
+//   But that would cost heavier works. Maybe in the future!
+//
+
+template <typename T>
+class myList {
+public:
+    // Internal node structure.
+    class node {
+    public:
+        T getValue() const {
+            return value;
+        }
+        void setValue(T val){
+            value = val;
+        }
+        // Read only, which means that you cannot change the next node through this node.
+        // The only way that you can change the interconnnection between nodes is through myList functions.
+        const node *getNext() const {
+            return next;
+        }
+        // Even node is put inside myList, 
+        // if myList want to use the private members, node should still possess a friend claim.
+        friend class myList<T>;
+    private:
+        T value = 0;
+        node *next = nullptr;
+    };
+
+    // Constructor and destructor
+    myList () {
+        head = new node;
+        tail = new node;
+        head -> next = tail;
+        listSize = 0;
+    }
+    // Destructor
+    ~myList () {
+        clear();
+        delete head;
+        delete tail;
+    }
+
+    // Attention: Lack of copy function, default only shallow copy
+
+    // Get the size
+    unsigned size() const {
+        return listSize;
+    }
+    // push and pop
+    void push_back(node *ptr){
+        insert(tail, ptr);
+    }
+    void push_front(node *ptr){
+        insert(head->next, ptr);
+    }
+    void pop_back(){
+        remove(back());
+    }
+    void pop_front(){
+        remove(head->next);
+    }
+    // Insert ptr at the position in front of pos
+    void insert(node *pos, node *ptr){
+        node *last = head;
+        while (last->next != pos){
+            if (last == tail) {
+                cerr << "Insert error: inserting position is not in this list." << endl;
+                return;
+            }
+            last = last->next;
+        }
+        last->next = ptr;
+        ptr->next = pos;
+        ++listSize;
+    }
+    // Remove node
+    void remove(node *ptr){
+        if (empty()){
+            cerr << "Empty list cannot apply remove()." << endl;
+            return;
+        }
+        node *last = head;
+        while (last->next != ptr){
+            if (last == tail){
+                cerr << "Remove error: node is not in this list." << endl;
+                return;
+            }
+            last = last->next;
+        }
+        last->next = ptr->next;
+        delete ptr;
+        --listSize;
+    }
+    // Front and back, editable
+    node *back(){
+        if (empty()){
+            cerr << "Error： cannot apply back() on empty list." << endl;
+            return {};
+        }
+        node *ptr = head;
+        while (ptr->next != tail)
+            ptr = ptr->next;
+        return ptr;
+    }
+    node *front(){
+        if (empty()){
+            cerr << "Error： cannot apply front() on empty list." << endl;
+            return {};
+        }
+        return head->next;
+    }
+    // Front and back, read only
+    const node *back() const {
+        if (empty()){
+            cerr << "Error： cannot apply back() on empty list." << endl;
+            return {};
+        }
+        node *ptr = head;
+        while (ptr->next != tail)
+            ptr = ptr->next;
+        return ptr;
+    }
+    const node *front() const {
+        if (empty()){
+            cerr << "Error： cannot apply front() on empty list." << endl;
+            return {};
+        }
+        return head->next;
+    }
+    bool empty() const {
+        return listSize == 0;
+    }
+    void clear(){
+        while (listSize != 0)
+            pop_front();
+    }
+    // Print the list to output
+    void print(std::ostream &output) const {
+        auto ptr = head->next;
+        output << "[";
+        while (ptr != tail && ptr->next != tail){
+            output << ptr->value << ", ";
+            ptr = ptr->next;
+        }
+        output << ptr->value << "]" << endl;
+    }
+private:
+    // Two sentinel nodes at the begin and end of the list
+    node *head;
+    node *tail;
+    unsigned listSize;
+};
+
+
+//
+//  Stack implementation:
+//  Use std::vector, and it is pretty easy.
+//
+
+template <typename T>
+class myStack{
+public:
+    T top() const {
+        if (empty()){
+            cerr << "Error: cannot get the top element of empty stack." << endl;
+            return {};
+        }
+        return list.back();
+    }
+    void pop() {
+        if (empty()){
+            cerr << "Error: cannot apply pop() on empty stack." << endl;
+            return;
+        }
+        list.pop_back();
+    }
+    // Left reference input
+    void push(const T &elem){
+        list.push_back(elem);
+    }
+    // Right reference input
+    void push(T &&elem){
+        list.push_back(std::move(elem));
+    }
+    bool empty() const {
+        return list.empty();
+    }
+    void clear() {
+        list.clear();
+    }
+    unsigned size() const {
+        return list.size();
+    }
+private:
+    vector<T> list;
+};
+
+
+//
+//  Queue implementation:
+//  Use circular array
+// 
+template <typename T>
+class myQueue{
+public:
+    myQueue():
+        capacity(16), listSize(0), start(1), end(0){
+        list = new T[INITSIZE];
+    }
+    ~myQueue(){
+        delete list;
+    }
+    void push(const T &elem){
+        if (listSize == capacity - 1)
+            resize();
+        // Circular
+        if (++end == capacity) end = 0;
+        list[end] = elem;
+        ++listSize;
+    }
+    void push(T &&elem){
+        if (listSize == capacity - 1)
+            resize();
+        if (++end == capacity) end = 0;
+        list[end] = elem;
+        ++listSize;
+    }
+    void pop(){
+        if (empty()){
+            cerr << "Error: cannot apply pop() on empty queue." << endl;
+            return;
+        }
+        if (++start == capacity) start = 0;
+        --listSize;
+    }
+
+    // Change the array to new and larger one.
+    // That is make capacity larger.
+    void resize() {
+        T *newList = new T[2*capacity+1];
+        unsigned j = 0;
+        for (auto i = start; i != end; ++i){
+            if (i == capacity) i = 0;
+            newList[j++] = list[i];
+        }
+        newList[j] = list[end];
+        capacity = capacity*2 + 1;
+        delete list;
+        list = newList;
+        start = 1;
+        end = 0;
+    }
+    T front() const {
+        return list[start];
+    }
+    T back() const {
+        return list[end];
+    }
+    bool empty() const {
+        return listSize == 0;
+    }
+    void clear() {
+        start = 1;
+        end = 0;
+        listSize = 0;
+    }
+    unsigned size() const {
+        return listSize;
+    }
+    
+private:
+    // Initial capacity of real array
+    const unsigned INITSIZE = 16;
+    T *list;
+    // Capacity is the real capacity of the array
+    unsigned capacity;
+    // listSize is the size of valid data
+    unsigned listSize;
+    // Start and end mark the start and end position of valid data
+    unsigned start;
+    unsigned end;
+};
+
 
 
 //
