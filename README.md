@@ -23,6 +23,24 @@ Use `std::vector` to implement stack data structure.
 ### myQueue
 Use `std::vector` would be much too easy. Instead, I use circular fundamental array to implement queue.
 
+
+### myBinaryTreeNode
+General binary tree node structure, with only copy and move constructors (no default constructor)
+
+### infix2postfix
+A function to convert an infix expression to postfix expression
+
+### myExpressionTree
+Expression Tree Implementation:
+Using `myBinaryTreeNode` template and use `std::string` to instantiate it
+In expression tree, leaf node contain operand strings and non-leaf node contain operators (in string).
+Expression public routines include three expression notation: *prefix*, *infix*, *postfix*
+By now, only support binary operators: +, -, *, /
+
+### myBST
+Binary search tree(BST) implementation, containing an inner node structure.
+
+
 ### myBubbleSort
 Bubble sort implementation.
 

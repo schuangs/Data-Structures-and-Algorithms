@@ -433,6 +433,364 @@ private:
 };
 
 
+//
+// -------------------- Tree --------------------
+//
+
+//
+// Binary tree node structure
+//
+template <typename T>
+struct myBinaryTreeNode {
+    T value;
+    myBinaryTreeNode *left = nullptr;
+    myBinaryTreeNode *right = nullptr;
+    // Constructor
+    myBinaryTreeNode(const T &val): value(val){}
+    myBinaryTreeNode(T &&val): value(std::move(val)){}
+};
+
+//
+//  Converter from infix to postfix expression
+//
+std::string infix2Postfix(const string &infix) {
+    std::vector<char> operatorList{'+','-','*','/','(',')', ' '};
+    std::map<char, unsigned> priority{
+        {'(', 100},
+        {'+', 1}, {'-', 1},
+        {'*', 2}, {'/', 2}
+    };
+    std::stack<char> s;
+    string postfix;
+    // Deal with prefix sign '+' and '-'
+    size_t i = 0;
+    string infixNew{infix};
+    while (i < infixNew.size() && infixNew[i] == ' ') ++i;
+    if (i >= infixNew.size()) return 0;
+    // Sign at the beginning of expression
+    if (infixNew[i] == '-' || infixNew[i] == '+')
+        infixNew.insert(i, 1,'0');
+    while (i < infixNew.size()-1){
+        // sign in the middle, '(-' and '(+'
+        if (infixNew[i] == '(' && (infixNew[i+1] == '-' || infixNew[i+1] == '+'))
+            infixNew.insert(i+1, 1,'0');
+        ++i;
+    }
+    // convert
+    for (auto c : infixNew){
+        if ( isdigit(c) || c == '.' ){
+            postfix.push_back(c);
+        } else {
+            postfix.push_back(' ');
+            if ( c == ' ' ) continue;
+            if ( c == ')' ){
+                while ( s.top() != '(' ){
+                    postfix.push_back(s.top());
+                    s.pop();
+                }
+                s.pop();
+            } else {
+                while ( !s.empty() && s.top() != '(' && priority[s.top()] >= priority[c] ){
+                    postfix.push_back(s.top());
+                    s.pop();
+                }
+                s.push(c);
+            }
+        }
+    }
+    while ( !s.empty() ){
+        postfix.push_back(s.top());
+        s.pop();
+    }
+    return postfix;
+}
+
+
+//
+//  Expression Tree Implementation:
+//  Using myBinaryTreeNode template and use std::string to instantiate it
+//  In expression tree, leaf node contain operand strings and non-leaf node contain operators (in string).
+//  Expression public routines include three expression notation: prefix, infix, postfix
+//  By now, only support binary operators: +, -, *, /
+//
+class myExpressionTree{
+public:
+    // Destructor
+    ~myExpressionTree(){
+        clear();
+    }
+
+    // Using std::stack to create expression tree
+    void readPostfix(const std::string &postfix) {
+        std::stack<myBinaryTreeNode<string> *> s;
+        // operand : temperarily store operand strings
+        std::string operand;
+        for (auto c : postfix){
+            if (c == ' ' || c == '+' || c == '-' || c == '*' || c == '/'){
+                // push operand node to stack
+                if (!operand.empty()){
+                    myBinaryTreeNode<string> *leaf = new myBinaryTreeNode<string>(operand);
+                    s.push(leaf);
+                    operand.clear();
+                }
+                // push operator node to stack
+                if (c != ' '){
+                    myBinaryTreeNode<string> *node = new myBinaryTreeNode<string>(string() + c);
+                    auto right = s.top(); s.pop();
+                    auto left = s.top(); s.pop();
+                    node->left = left;
+                    node->right = right;
+                    s.push(node);
+                }
+            } else {
+                // record operand string
+                operand.push_back(c);
+            }
+        }
+        root = s.top(); s.pop();
+        if (!s.empty()){
+            cerr << "Error: Invalid postfix expression." << endl;
+            return;
+        }
+    }
+    // Use infix2Postfix to convert infix to postfix, then read postfix
+    void readInfix(const std::string &infix) {
+        std::string postfix = infix2Postfix(infix);
+        readPostfix(postfix);
+    }
+
+    // Return three types of expression
+    void printInfix(std::ostream &output = std::cout) const {
+        printInfix(root, output);
+    }
+    void printPostfix(std::ostream &output = std::cout) const {
+        printPostfix(root, output);
+    }
+    void printPrefix(std::ostream &output = std::cout) const {
+        printPrefix(root, output);
+    }
+
+    // clear() and empty()
+    void clear() {
+        clear(root);
+    }
+    bool empty() const {
+        return root == nullptr;
+    }
+
+private:
+    // Tree root
+    myBinaryTreeNode<string> *root = nullptr;
+
+    // Private real print function, using pointer as first parameter
+    void printInfix(myBinaryTreeNode<string> *node, std::ostream &output) const {
+        if (node == nullptr) return;
+        printInfix(node->left, output);
+        output << node->value << " ";
+        printInfix(node->right, output);
+    }
+    void printPostfix(myBinaryTreeNode<string> *node, std::ostream &output) const {
+        if (node == nullptr) return;
+        printPostfix(node->left, output);
+        printPostfix(node->right, output);
+        output << node->value << " ";
+    }
+    void printPrefix(myBinaryTreeNode<string> *node, std::ostream &output) const {
+        if (node == nullptr) return;
+        output << node->value << " ";
+        printPrefix(node->left, output);
+        printPrefix(node->right, output);
+    }
+
+    // Private real clear function, using pointer as parameter
+    // Attention: Here use reference of the pointer to node. So the pointer can be set as nullptr.
+    void clear(myBinaryTreeNode<string> *&node) {
+        if (node == nullptr) return;
+        clear(node->left);
+        clear(node->right);
+        delete node;
+        // Set pointer to nullptr
+        node = nullptr;      
+    }
+};
+
+
+//
+//  Binary Search Tree (BST):
+//  node->values repeat is not allowed
+//
+template <typename T>
+class myBST{
+public:
+    // Constructors
+    myBST() = default;
+    // Copy constructor
+    myBST(const myBST<T> &rhs){
+        root = clone(rhs.root);
+    }
+    // Move constructor
+    myBST(myBST<T> &&rhs){
+        root = rhs.root;
+    }
+    // Destructor
+    ~myBST(){
+        clear(root);
+    }
+
+    // Get the minimum and maximum value
+    T min() const {
+        return min(root);
+    }
+    T max() const {
+        return max(root);
+    }
+    // Whether contain val
+    bool contain(T val) const {
+        return contain(root, val);
+    }
+    // empty and clear
+    bool empty() const {
+        return root == nullptr;
+    }
+    void clear() {
+        clear(root);
+    }
+
+    // insert and remove
+    void insert(const T &val) {
+        insert(root, val);
+    }
+    void insert(T &&val){
+        insert(root, std::move(val));
+    }
+    void remove(const T &val){
+        remove(root, val);
+    }
+    void remove(T &&val){
+        // Remove a right reference is of no profit
+        // So I just use left reference again
+        remove(root, val);
+    }
+
+private:
+    // Inner node structure
+    struct node{
+        T value;
+        node *left = nullptr;
+        node *right = nullptr;
+
+        // Constructors
+        node() = default;
+        node(const T &val, node *l, node *r):
+            value(val), left(l), right(r){}
+        node(T &&val, node *l, node *r):
+            value(std::move(val)), left(l), right(r){}
+    };
+    
+    // The only member variable
+    node *root = nullptr;
+
+    // Return a clone of the tree pointed by ptr
+    node *clone(node *ptr){
+        if (ptr == nullptr) return nullptr;
+        return new node{ptr->value, clone(ptr->left), clone(ptr->right)};
+    }
+    // Private versions of all routines
+    T min(node *ptr) const {
+        if (ptr == nullptr) {
+            cerr << "Error: cannot get min value of nullptr" << endl;
+            return {};
+        }
+        T result = ptr->value;
+        if (ptr->left != nullptr)
+            result = std::min(result, min(ptr->left));
+        if (ptr->right != nullptr)
+            result = std::min(result, min(ptr->right));
+        return result;
+    }
+    T max(node *ptr) const {
+        if (ptr == nullptr) {
+            cerr << "Error: cannot get max value of nullptr" << endl;
+            return {};
+        }
+        T result = ptr->value;
+        if (ptr->left != nullptr)
+            result = std::max(result, max(ptr->left));
+        if (ptr->right != nullptr)
+            result = std::max(result, max(ptr->right));
+        return result;
+    }
+    bool contain(node *ptr, T val) const {
+        if (ptr == nullptr) return false;
+        return ptr->value == val || contain(ptr->left, val) || contain(ptr->right, val);
+    }
+    void clear(node *&ptr){
+        if (ptr == nullptr) return;
+        clear(ptr->left);
+        clear(ptr->right);
+        delete ptr;
+        ptr = nullptr;
+    }
+
+    // Real insert routine
+    void insert(node *&ptr, const T &val){
+        if (ptr == nullptr){
+            auto newNode = new node{val, nullptr, nullptr};
+            ptr = newNode;
+        } else if (ptr->value > val){
+            insert(ptr->left, val);
+        } else if (ptr->value < val){
+            insert(ptr->right, val);
+        } else {
+            // cerr << "Error: inserted value already exist." <<  endl;
+        }
+    }
+    void insert(node *&ptr, T &&val){
+        if (ptr == nullptr){
+            auto newNode = new node{std::move(val), nullptr, nullptr};
+            ptr = newNode;
+        } else if (ptr->value > val){
+            insert(ptr->left, std::move(val));
+        } else if (ptr->value < val){
+            insert(ptr->right, std::move(val));
+        } else {
+            // cerr << "Error: inserted value already exist." <<  endl;
+        }
+    }
+
+    // Real remove routine
+    void remove(node *&ptr, const T &val){
+        if (ptr == nullptr) return;
+        if (ptr->value > val) remove(ptr->left, val);
+        else if (ptr->value < val) remove(ptr->right, val);
+        else {
+            // For leaf nodes
+            if (ptr->left == nullptr && ptr->right == nullptr){
+                delete ptr;
+                ptr = nullptr;
+            } else if (ptr->left == nullptr){
+                // For nodes with only one child at right branch
+                auto p = ptr;
+                ptr = ptr->left;
+                delete p;
+            } else if (ptr->right == nullptr){
+                // For nodes with only one child at left branch
+                auto p = ptr;
+                ptr = ptr->right;
+                delete p;
+            } else {
+                // For nodes with two children, find the max of right child,
+                // and move the max value to the node, recursively remove the max node.
+                auto rightMin = min(ptr->right);
+                ptr->value = rightMin;
+                remove(ptr->right, rightMin);
+            }
+        }
+    }
+};
+
+
+
 
 //
 // -------------------- Sort --------------------
@@ -574,55 +932,7 @@ double myPostfixCalculator(const string &postfix) {
 //  Convert an infix expression into postfix expression, then use myPostCalculator to calculate the value.
 //
 double myCalculator(const string &infix) {
-    std::vector<char> operatorList{'+','-','*','/','(',')', ' '};
-    std::map<char, unsigned> priority{
-        {'(', 100},
-        {'+', 1}, {'-', 1},
-        {'*', 2}, {'/', 2}
-    };
-    std::stack<char> s;
-    string postfix;
-    // Deal with prefix sign '+' and '-'
-    size_t i = 0;
-    string infixNew{infix};
-    while (i < infixNew.size() && infixNew[i] == ' ') ++i;
-    if (i >= infixNew.size()) return 0;
-    // Sign at the beginning of expression
-    if (infixNew[i] == '-' || infixNew[i] == '+')
-        infixNew.insert(i, 1,'0');
-    while (i < infixNew.size()-1){
-        // sign in the middle, '(-' and '(+'
-        if (infixNew[i] == '(' && (infixNew[i+1] == '-' || infixNew[i+1] == '+'))
-            infixNew.insert(i+1, 1,'0');
-        ++i;
-    }
-    // convert
-    for (auto c : infixNew){
-        if ( isdigit(c) || c == '.' ){
-            postfix.push_back(c);
-        } else {
-            postfix.push_back(' ');
-            if ( c == ' ' ) continue;
-            if ( c == ')' ){
-                while ( s.top() != '(' ){
-                    postfix.push_back(s.top());
-                    s.pop();
-                }
-                s.pop();
-            } else {
-                while ( !s.empty() && s.top() != '(' && priority[s.top()] >= priority[c] ){
-                    postfix.push_back(s.top());
-                    s.pop();
-                }
-                s.push(c);
-            }
-        }
-    }
-    while ( !s.empty() ){
-        postfix.push_back(s.top());
-        s.pop();
-    }
-    return myPostfixCalculator(postfix);
+    return myPostfixCalculator(infix2Postfix(infix));
 }
 
 # endif
