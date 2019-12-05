@@ -760,7 +760,10 @@ private:
 
     // Real remove routine
     void remove(node *&ptr, const T &val){
-        if (ptr == nullptr) return;
+        if (ptr == nullptr){
+            // cerr << "Error: removed value dosen't exist." << endl;
+            return;
+        }
         if (ptr->value > val) remove(ptr->left, val);
         else if (ptr->value < val) remove(ptr->right, val);
         else {
@@ -787,6 +790,273 @@ private:
             }
         }
     }
+};
+
+
+//
+//  AVL Tree:
+//   Bias is the allowed imbalance of the AVL tree which is set as a private member variable.
+//
+template <typename T>
+class myAVLTree{
+public:
+    myAVLTree() = default;
+    // You can choose to pass a bias value as b, if you want to change bias. And b should be non-negative.
+    myAVLTree(const myAVLTree &rhs, int b = 1){
+        if (b < 0) {
+            cerr << "Error: bias should be non-negative." << endl;
+            return;
+        }
+        root = clone(rhs.root);
+        bias = b;
+    }
+    myAVLTree(myAVLTree &&rhs, int b = 1){
+        if (b < 0) {
+            cerr << "Error: bias should be non-negative." << endl;
+            return;
+        }
+        root = rhs;
+        bias = b;
+    }
+    ~myAVLTree(){
+        clear(root);
+    }
+    void clear() {
+        clear(root);
+    }
+    bool empty() const {
+        return root == nullptr;
+    }
+
+    // Get the height of the tree.
+    int getHeight() const {
+        return getHeight(root);
+    }
+
+    // find the maximum and minimum
+    T max() const {
+        node *maxNode = max(root);
+        if (maxNode == nullptr){
+            cerr << "Error: cannot get the maximum of empty tree." << endl;
+            return {};
+        }
+        return maxNode->value;
+    }
+    T min() const {
+        node *minNode = min(root);
+        if (minNode == nullptr){
+            cerr << "Error: cannot get the minimum of empty tree." << endl;
+            return {};
+        }
+        return minNode->value;
+    }
+
+    // public contain, insert and remove, just like them in myBST.
+    bool contain(const T&val) const {
+        return contain(val, root);
+    }
+    void insert(const T &val) {
+        insert(val, root);
+    }
+    void insert(T &&val){
+        insert(std::move(val), root);
+    }
+    void remove(const T &val){
+        remove(val, root);
+    }
+    void remove(T &&val){
+        remove(val, root);
+    }
+private:
+    // inner node structure, there is a height member additional
+    struct node {
+        T value;
+        node *left = nullptr;
+        node *right = nullptr;
+        int height = 0;
+        node(const T &val, node *l, node *r, int h):
+            value(val), left(l), right(r), height(h) {}
+        node(T &&val, node *l, node *r, int h):
+            value(std::move(val)), left(l), right(r), height(h) {}
+    };
+    // get the height of the node. For convenience, we set height of nullptr as -1.
+    int getHeight(node *ptr) const {
+        return ptr == nullptr ? -1 : ptr->height;
+    }
+    // return a clone of the node structure.
+    node *clone(node *ptr) const {
+        if (ptr == nullptr) return nullptr;
+        return new node{ptr->value, clone(ptr->left), clone(ptr->right), ptr->height};
+    }
+    void clear(node *&ptr) {
+        if (ptr == nullptr) return;
+        clear(ptr->left);
+        clear(ptr->right);
+        delete ptr;
+        ptr = nullptr;
+    }
+    node *max(node *ptr) const {
+        if (ptr == nullptr) return nullptr;
+        T maxVal = ptr->value;
+        node *maxNode = ptr;
+        if (ptr->left != nullptr){
+            node *leftMax = max(ptr->left);
+            if (leftMax->value > maxVal){
+                maxVal = leftMax->value;
+                maxNode = leftMax;
+            }
+        }
+        if (ptr->right != nullptr){
+            node *rightMax = max(ptr->right);
+            if (rightMax->value > maxVal){
+                maxVal = rightMax->value;
+                maxNode = rightMax;
+            }
+        }
+        return maxNode;
+    }
+    node *min(node* ptr) const {
+        if (ptr == nullptr) return nullptr;
+        T minVal = ptr->value;
+        node *minNode = ptr;
+        if (ptr->left != nullptr){
+            node *leftMin = min(ptr->left);
+            if (leftMin->value < minVal){
+                minVal = leftMin->value;
+                minNode = leftMin;
+            }
+        }
+        if (ptr->right != nullptr){
+            node *rightMin = min(ptr->right);
+            if (rightMin->value < minVal){
+                minVal = rightMin->value;
+                minNode = rightMin;
+            }
+        }
+        return minNode;
+    }
+    bool contain(const T &val, node *ptr) const {
+        if (ptr == nullptr) return false;
+        return ptr->value == val || contain(val, ptr->left) || contain(val, ptr->right);
+    }
+
+    // In AVL tree, insert and remove routines should apply balance() routine to balance the AVL tree.
+    void insert(const T &val, node *&ptr) {
+        if (ptr == nullptr) {
+            node *newNode = new node{val, nullptr, nullptr, 0};
+            ptr = newNode;
+        } else if (val < ptr->value){
+            insert(val, ptr->left);
+        } else if (val > ptr->value){
+            insert(val, ptr->right);
+        } else {
+            // cerr << "Error: inserted value already exists." << endl;
+            return;
+        }
+        // Additional balance routine
+        balance(ptr);
+    }
+    void insert(T &&val, node *&ptr){
+        if (ptr == nullptr){
+            node *newNode = new node{std::move(val), nullptr, nullptr, 0};
+            ptr = newNode;
+        } else if (val < ptr->value){
+            insert(val, ptr->left);
+        } else if (val > ptr->value){
+            insert(val, ptr->right);
+        } else {
+            // cerr << "Error: inserted value already exists." << endl;
+            return;
+        }
+        balance(ptr);
+    }
+
+    void remove(const T &val, node *&ptr){
+        if (ptr == nullptr){
+            // cerr << "Error: removed value dosen't exist." << endl;
+            return;
+        } else if (val < ptr->value){
+            remove(val, ptr->left);
+        } else if (val > ptr->value){
+            remove(val, ptr->right);
+        } else {
+            if (ptr->left == nullptr && ptr->right == nullptr){
+                delete ptr;
+                ptr = nullptr;
+            } else if (ptr->left == nullptr){
+                ptr->value = ptr->right->value;
+                delete ptr->right;
+                ptr->right = nullptr;
+            } else if (ptr->right == nullptr){
+                ptr->value = ptr->left->value;
+                delete ptr->left;
+                ptr->left = nullptr;
+            } else {
+                node *rightMin = min(ptr->right);
+                ptr->value = rightMin->value;
+                remove(rightMin->value, rightMin);
+            }
+            balance(ptr);
+        }
+    }
+
+    // Critical in AVL tree!
+    // balance routine
+    void balance(node *&ptr) {
+        if (ptr == nullptr) return;
+        if (getHeight(ptr->left) - getHeight(ptr->right) > bias) {
+            // Left child overload, single rotate or double rotate
+            if (getHeight(ptr->left->left) > getHeight(ptr->left->right))
+                rotateLeft(ptr);
+            else
+                doubleRotateLeft(ptr);
+        } else if (getHeight(ptr->right) - getHeight(ptr->left) > bias) {
+            // Right child overload, single rotate or double rotate
+            if (getHeight(ptr->right->right) > getHeight(ptr->right->left))
+                rotateRight(ptr);
+            else
+                doubleRotateRight(ptr);
+        }
+        // Put height update process in specific rotate routines
+    }
+
+    // Single rotate with left child
+    void rotateLeft(node *&ptr) {
+        // Rotate
+        node *newPtr = ptr->left;
+        ptr->left = newPtr->right;
+        newPtr->right = ptr;
+        // Update height
+        ptr->height = std::max(getHeight(ptr->left), getHeight(ptr->right)) + 1;
+        newPtr->height = std::max(getHeight(newPtr->left), ptr->height) + 1;
+
+        ptr = newPtr;
+    }
+    // Single rotate with right child
+    void rotateRight(node *&ptr) {
+        // Rotate
+        node *newPtr = ptr->right;
+        ptr->right = newPtr->left;
+        newPtr->left = ptr;
+        // Update height
+        ptr->height = std::max(getHeight(ptr->left), getHeight(ptr->right)) + 1;
+        newPtr->height = std::max(getHeight(ptr->right), ptr->height) + 1;
+
+        ptr = newPtr;
+    }
+    // Double rotate can be decomposed as two single rotates
+    void doubleRotateLeft(node *&ptr) {
+        rotateRight(ptr->left);
+        rotateLeft(ptr);
+    }
+    void doubleRotateRight(node *&ptr) {
+        rotateLeft(ptr->right);
+        rotateRight(ptr);
+    }
+
+    // The only two private member variables
+    node *root = nullptr;
+    int bias = 1;
 };
 
 

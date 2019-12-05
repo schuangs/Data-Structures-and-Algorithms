@@ -40,6 +40,10 @@ By now, only support binary operators: +, -, *, /
 ### myBST
 Binary search tree(BST) implementation, containing an inner node structure.
 
+### myAVLTree
+AVL Tree, a balanced type of binary search tree. With height recorded in each node and an additional balance routine.
+Balance routine include single rotation and double rotation, which is critical for AVL tree.
+
 
 ### myBubbleSort
 Bubble sort implementation.
