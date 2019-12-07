@@ -17,6 +17,7 @@
 # include <chrono>
 # include <iostream>
 # include <fstream>
+# include <random>
 
 using std::cin;
 using std::cout;
@@ -68,8 +69,9 @@ public:
     }
     // End counting
     void pEnd(){
+        points.push_back(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()));
         counting = false;
-        end = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
+        end = points.back();
         return;
     }
     // Return duration between start and end in millisecond.
@@ -92,6 +94,17 @@ public:
         // Display total time
         cout << endl << "Running time:     " << (end - start).count() << " ms" << endl;
         return;
+    }
+    // Return a list of checkpoints and end point
+    vector<int64_t> pList() const {
+        if (counting == true){
+            cerr << "pTime is still counting !" << endl;
+            return {};
+        }
+        vector<int64_t> list;
+        for (auto i : points)
+            list.push_back((i-start).count());
+        return list;
     }
 };
 
@@ -1059,6 +1072,246 @@ private:
     int bias = 1;
 };
 
+//
+// Splay Tree:
+//  From top down splay. From bottom up method is another way of splay, which is much easier.
+//
+template <typename T>
+class mySplayTree {
+public:
+    // default constructor
+    mySplayTree() = default;
+    // copy constructor
+    mySplayTree(const mySplayTree &rhs) {
+        root = clone(rhs.root);
+    }
+    mySplayTree(mySplayTree &&rhs){
+        root = rhs.root;
+    }
+    ~mySplayTree() {
+        clear(root);
+    }
+    bool empty() const {
+        return root == nullptr;
+    }
+
+    void clear() {
+        clear(root);
+    }
+
+    // Just splay and test the root value.
+    bool contain(const T &val){
+        if (root == nullptr) return false;
+        splay(val, root);
+        return root->value == val;
+    }
+    bool contain(T &&val){
+        // use left reference version instead, cause splay function receive left reference only.
+        return contain(val);
+    }
+
+    // Get the maximum and minimum value of splay tree
+    // After access the maximum or minimum value, a splay function should be applied.
+    T max(){
+        if (root == nullptr){
+            cerr << "Error: cannot get the maximum of empty tree." << endl;
+            return {};
+        }
+        node *maxNode = root;
+        while (maxNode->right != nullptr)
+            maxNode = maxNode->right;
+        splay(maxNode->value, root);
+        return maxNode->value;    
+    }
+    T min(){
+        if (root == nullptr){
+            cerr << "Error: cannot get the minimum of empty tree." << endl;
+            return {};
+        }
+        node *minNode = root;
+        while (minNode->left != nullptr)
+            minNode = minNode->left;
+        splay(minNode->value, root);
+        return minNode->value;
+    }
+
+    // insert without recursion, top down way.
+    // using splay function instead.
+    void insert(const T &val) {
+        // create a new node.
+        node *newNode = new node{val, nullptr, nullptr};
+        if (root == nullptr){
+            root = newNode;
+            return;
+        }
+        // splay val to see whether val already exists.
+        splay(val, root);
+        if (val < root->value){
+            newNode->left = root->left;
+            newNode->right = root;
+            root->left = nullptr;
+            root = newNode;
+        } else if (val > root->value) {
+            newNode->right = root->right;
+            newNode->left = root;
+            root->right = nullptr;
+            root = newNode;
+        } else{
+            // cerr << <"Error: inserted value already exists." << endl;
+            delete newNode;
+        }
+    }
+    void insert(T &&val) {
+        // use left reference one. cause only left reference splay function are provided.
+        insert(val);
+    }
+    
+    // remove without recursion, top down way
+    // use splay function instead.
+    void remove(const T& val) {
+        if (!contain(val)){
+            cerr << "Error: removed value dosen't exist." << endl;
+            return;
+        }
+        if (root->left == nullptr){
+            node *oldRoot = root;
+            root = root->right;
+            delete oldRoot;
+        } else {
+            // splay to move the maximum node of left tree to its root
+            splay(val, root->left);
+            root->left->right = root->right;
+            node *oldRoot = root;
+            root = root->left;
+            delete oldRoot;
+        }
+    }
+    void remove(T &&val) {
+        // use left reference version.
+        remove(val);
+    }
+
+private:
+    // Inner node structure
+    struct node {
+        T value;
+        node *left;
+        node *right;
+        node(const T &val, node *l, node *r):
+            value(val), left(l), right(r) {}
+        node(T &&val, node *l, node *r):
+            value(std::move(val)), left(l),right(r) {}
+    };
+
+    // The same as AVL tree. Recursive way.
+    node *clone(node *ptr) {
+        if (ptr == nullptr) return nullptr;
+        return new node{ptr->value, clone(ptr->left), clone(ptr->right)};
+    }
+
+    // The same as AVL tree. Recursive way.
+    void clear(node *&ptr) {
+        if (ptr == nullptr) return;
+        clear(ptr->left);
+        clear(ptr->right);
+        delete ptr;
+        ptr = nullptr;
+    }
+
+    // From top down splay
+    // make the node containing x at the root.
+    // if x is not found, make the last node at the root
+    // only left reference type is provided.
+    void splay(const T&x, node *&ptr) {
+        if (ptr == nullptr) return;
+        // header node contains left and right tree root.
+        // header is just a auxiliary node, who should be deleted at the end
+        node *header = new node{{}, nullptr, nullptr};
+        // leftMax and rightMin contain maximum node of left tree and minimum node of right tree
+        // initially, leftMax and rightMin set set to header.
+        node *leftMax = header, *rightMin = header;
+        while (true){
+            if (x < ptr->value){
+                if (ptr->left == nullptr) break;
+                // zig-zig case require a additional AVL single rotate (the same as AVL tree)
+                if (x < ptr->left->value && ptr->left->left != nullptr)
+                    rotateLeft(ptr);
+                // splay (top down) single rotate (not the same as AVL rotate)
+                rightMin->left = ptr;
+                rightMin = ptr;
+                ptr = ptr->left;
+                // rightMin->left = nullptr;   // no need to set rightMin->left = nullptr, cause we will never reference this.
+            } else if (x > ptr->value){
+                if (ptr->right == nullptr) break;
+                if (x > ptr->right->value && ptr->right->right != nullptr)
+                    rotateRight(ptr);
+                leftMax->right = ptr;
+                leftMax = ptr;
+                ptr = ptr->right;
+                // leftMax->left = nullptr;  // the Same as the left one
+            } else
+                break;  // the case when x is at the root
+        }
+
+        // put together three parts of the tree
+        leftMax->right = ptr->left;
+        rightMin->left = ptr->right;
+        ptr->left = header->right;
+        ptr->right = header->left;
+        delete header;
+    }
+
+    // single rotate routine (the same as AVL tree implementation)
+    // and no need to update height !
+    void rotateLeft(node *&ptr){
+        node *newPtr = ptr->left;
+        ptr->left = newPtr->right;
+        newPtr->right = ptr;
+        ptr = newPtr;
+
+    }
+    void rotateRight(node *&ptr){
+        node *newPtr = ptr->right;
+        ptr->right = newPtr->left;
+        newPtr->left = ptr;
+        ptr = newPtr;
+    }
+    node *root = nullptr;
+};
+
+
+//
+//  A routine to evaluate the performance of a tree structure.
+//   Using pTime routine to measure the time it cost for a tree structure to finish a fixed process.
+//   inputNum is the number of random integers input.
+//
+template <template<typename U> typename treeTemplate>
+void myTreeEvaluator(unsigned inputNum = 100, unsigned accessNum = 100, std::string inputMode = "Random", std::string accessMode = "Random") {
+    cout << "Notice: template should support int type element and repeat insertion." << endl;
+    cout << "Press ENTER to continue if you are sure about your template." << endl;
+    string cont;
+    getline(cin, cont);
+    pTime pt;
+    std::random_device rd;
+    treeTemplate<int> tree;
+    for (auto i = 0; i < inputNum; ++i){
+        if (inputMode == "Random")
+            tree.insert(rd());
+        else if (inputMode == "Sequential")
+            tree.insert(i + 1); 
+    }
+    auto maxVal = tree.max(), minVal = tree.min();
+    pt.pStart();
+    for (auto i = 0; i < accessNum; ++i){
+        if (accessMode == "Random")
+            tree.contain(rd());
+        else if (accessMode == "Sequential")
+            tree.contain((maxVal+minVal)/2 + 1);
+    }
+    pt.pEnd();        
+    cout << "Total time for " << accessNum << " accesses: " << pt.pDuration() << " ms" << endl;
+    cout << "Mean access time: " << pt.pDuration()*1.0 / accessNum << " ms" << endl;
+}
 
 
 

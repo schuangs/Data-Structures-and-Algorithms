@@ -44,6 +44,12 @@ Binary search tree(BST) implementation, containing an inner node structure.
 AVL Tree, a balanced type of binary search tree. With height recorded in each node and an additional balance routine.
 Balance routine include single rotation and double rotation, which is critical for AVL tree.
 
+### mySplayTree
+Splay tree, from top down implementation. None recursive element reference.
+
+### myTreeEvaluator
+A test routine to evaluate performance of a tree template.
+Template should support int type element, and tolerate repeat insertion.
 
 ### myBubbleSort
 Bubble sort implementation.
