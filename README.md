@@ -51,6 +51,13 @@ Splay tree, from top down implementation. None recursive element reference.
 A test routine to evaluate performance of a tree template.
 Template should support int type element, and tolerate repeat insertion.
 
+
+### mySCHashTable
+Seperate chaining hash table implementation.
+
+### myProbingHashTable
+Probing hash table implementation.
+
 ### myBubbleSort
 Bubble sort implementation.
 

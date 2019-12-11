@@ -9,6 +9,7 @@
 # define MYDSA_H
 
 # include <vector>
+# include <list>
 # include <string>
 # include <queue>
 # include <stack>
@@ -18,12 +19,14 @@
 # include <iostream>
 # include <fstream>
 # include <random>
+# include <algorithm>
 
 using std::cin;
 using std::cout;
 using std::cerr;
 using std::endl;
 using std::vector;
+using std::list;
 using std::string;
 using std::priority_queue;
 
@@ -910,47 +913,23 @@ private:
     }
     node *max(node *ptr) const {
         if (ptr == nullptr) return nullptr;
-        T maxVal = ptr->value;
         node *maxNode = ptr;
-        if (ptr->left != nullptr){
-            node *leftMax = max(ptr->left);
-            if (leftMax->value > maxVal){
-                maxVal = leftMax->value;
-                maxNode = leftMax;
-            }
-        }
-        if (ptr->right != nullptr){
-            node *rightMax = max(ptr->right);
-            if (rightMax->value > maxVal){
-                maxVal = rightMax->value;
-                maxNode = rightMax;
-            }
-        }
+        while (maxNode->right != nullptr)
+            maxNode = maxNode->right;
         return maxNode;
     }
     node *min(node* ptr) const {
         if (ptr == nullptr) return nullptr;
-        T minVal = ptr->value;
         node *minNode = ptr;
-        if (ptr->left != nullptr){
-            node *leftMin = min(ptr->left);
-            if (leftMin->value < minVal){
-                minVal = leftMin->value;
-                minNode = leftMin;
-            }
-        }
-        if (ptr->right != nullptr){
-            node *rightMin = min(ptr->right);
-            if (rightMin->value < minVal){
-                minVal = rightMin->value;
-                minNode = rightMin;
-            }
-        }
+        while (minNode->left != nullptr)
+            minNode = minNode->left;
         return minNode;
     }
     bool contain(const T &val, node *ptr) const {
         if (ptr == nullptr) return false;
-        return ptr->value == val || contain(val, ptr->left) || contain(val, ptr->right);
+        if (val < ptr->value) return contain(val, ptr->left);
+        if (val > ptr->value) return contain(val, ptr->right);
+        return true;
     }
 
     // In AVL tree, insert and remove routines should apply balance() routine to balance the AVL tree.
@@ -1313,6 +1292,291 @@ void myTreeEvaluator(unsigned inputNum = 100, unsigned accessNum = 100, std::str
     cout << "Mean access time: " << pt.pDuration()*1.0 / accessNum << " ms" << endl;
 }
 
+
+//
+// -------------------- Hash Table --------------------
+//
+
+//
+// function class template: hash function.
+//
+template <typename keyType>
+class hashFunction {
+public:
+    size_t operator()(const keyType &key) const;
+};
+
+//
+// function class template instantiation.
+//  std::string, int
+//
+template<>
+class hashFunction<string> {
+public:
+    size_t operator()(const string &s) {
+        size_t result = 0;
+        for (auto c : s)
+            result = 37*result + c;
+        return result;
+    }
+};
+template<>
+class hashFunction<int> {
+public:
+    size_t operator()(int n) {
+        return n;
+    }
+};
+
+
+//
+//  Seperate Chaining Hash Table:
+//   Hash table using seperate chaining method to deal with collision.
+//   Use an std::list to record collided elements.
+//   And when load factor reach 0.5, rehash it to get better performance.
+//
+template <typename T>
+class mySCHashTable {
+public:
+    explicit mySCHashTable(size_t initSize = 101){
+        theLists = vector<std::list<T>>(initSize);
+    }
+    ~mySCHashTable(){
+        clear();
+    }
+    // load factor:   number of element divided by the total capacity of theLists.
+    // should not be larger than 0.5, otherwise the performance will suffer.
+    double loadFactor() const {
+        return num*1.0/theLists.size();
+    }
+
+    // return the number of elements.
+    unsigned number() const {
+        return num;
+    }
+    bool empty() const {
+        return num == 0;
+    }
+    void clear() {
+        for (auto l : theLists)
+            l.clear();
+        num = 0;
+    }
+    bool contain(T val) const {
+        auto index = hash(val);
+        return std::find(theLists[index].begin(), theLists[index].end(), val) != theLists[index].end();
+    }
+    void insert(const T &newVal) {
+        auto index = hash(newVal);
+        theLists[index].push_front(newVal);
+        ++num;
+        if (loadFactor() > 0.5) rehash();
+    }
+    void insert(T &&newVal) {
+        auto index = hash(newVal);
+        theLists[index].push_front(std::move(newVal));
+        ++num;
+        if (loadFactor() > 0.5) rehash();
+    }
+
+    void remove(T val) {
+        if (empty()) {
+            cerr << "Error: cannot remove element from empty hash table." << endl;
+            return;
+        }
+        auto index = hash(val);
+        auto itr = std::find(theLists[index].begin(), theLists[index].end(), val);
+        if (itr == theLists[index].end()){
+            cerr << "Error: removed element dosen't exist." << endl;
+            return;
+        }
+        theLists[index].erase(itr);
+        --num;
+    }
+
+private:
+    // use std::vector to contain chains
+    vector<std::list<T>> theLists;
+    // number of element.
+    unsigned num = 0;
+    // rehash routine: if no new size pass in, double the size.
+    void rehash(int newSize = 0) {
+        if (newSize == 0) newSize = 2*theLists.size() + 1;
+        auto oldLists = theLists;
+        clear();
+        theLists = vector<std::list<T>>(newSize);
+        for (auto &l : oldLists){
+            for (auto &val : l)
+                insert(std::move(val));
+        }
+    }
+    // member hash function, using hashFunction function class template.
+    size_t hash(T item) const {
+        static hashFunction<T> hf;
+        return hf(item) % theLists.size();
+    }
+};
+
+
+//
+// Probing Hash Table
+//  Do not use seperate chaining method to deal with collision. Find another slot for collided element instead.
+//  Here inplement linear probing, quadratic probing.
+//
+
+//
+// Define linear and quadratic probing function
+// 
+size_t linearProbing(unsigned shift) {
+    return shift;
+}
+size_t quadraticProbing(unsigned shift) {
+    return shift * shift;
+}
+
+//
+//  Probing Hash Table Class Template
+//
+template <typename T>
+class myProbingHashTable {
+public:
+    // Use second parameter to indicate which probing function to use.
+    explicit myProbingHashTable(unsigned initSize = 101, string probeMode = "Linear") {
+        slots = vector<hashEntry>(initSize);
+        num = 0;
+        if (probeMode == "Linear")
+            probing = linearProbing;
+        else if (probeMode == "Quadratic")
+            probing = quadraticProbing;
+    }
+    bool empty() const {
+        return num == 0;
+    }
+    void clear() {
+        num = 0;
+        for (auto entry : slots)
+            entry.state = EntryType::EMPTY;
+    }
+
+    double loadFactor() const {
+        return num * 1.0 / slots.size();
+    }
+
+    unsigned number() const {
+        return num;
+    }
+
+    bool contain(T val) const {
+        size_t initIndex = hash(val), index = initIndex;
+        unsigned shift = 0;
+        // DELETED EntryType positions are the same as ACTIVE position. 
+        while (slots[index].state == EntryType::DELETED 
+        || (slots[index].state == EntryType::ACTIVE && slots[index].value != val))
+            index = nextPosition(initIndex, ++shift);
+        return slots[index].value == val;
+    }
+
+    void insert(const T &val) {
+        auto initIndex = hash(val), index = initIndex;
+        unsigned shift = 0;
+        // DELETED EntryType positions are the same as EMPTY position for insertion.
+        while (slots[index].state == EntryType::ACTIVE && slots[index].value != val)
+            index = nextPosition(initIndex, ++shift);
+        if (slots[index].state == EntryType::ACTIVE && slots[index].value == val){
+            cerr << "Error: inserted element already exists." << endl;
+            return;
+        } else {
+            slots[index].state = EntryType::ACTIVE;
+            slots[index].value = val;
+            ++num;
+
+            // if load factor is larger than 0.5, rehash !
+            if (loadFactor() > 0.5) rehash();
+        }
+    }
+    void insert(T &&val) {
+        auto initIndex = hash(val), index = initIndex;
+        unsigned shift = 0;
+        while (slots[index].state == EntryType::ACTIVE && slots[index].value != val)
+            index = nextPosition(initIndex, ++shift);
+        
+        if (slots[index].state == EntryType::ACTIVE && slots[index].value == val){
+            cerr << "Error: inserted element already exists." << endl;
+            return;
+        } else {
+            slots[index].state = EntryType::ACTIVE;
+            slots[index].value = std::move(val);
+            ++num;
+            if (loadFactor() > 0.5) rehash();
+        }
+    }
+    void remove(T val) {
+        if (empty()) {
+            cerr << "Error: cannot remove element from empty hash table." << endl;
+            return;
+        }
+        auto initIndex = hash(val), index = initIndex;
+        unsigned shift = 0;
+        // DELETE EntryType positions are the same as ACTIVE position when removing.
+        while (slots[index].state == EntryType::DELETED
+        || (slots[index].state == EntryType::ACTIVE && slots[index].value != val))
+            index = nextPosition(initIndex, ++shift);
+        if (slots[index].state == EntryType::EMPTY){
+            cerr << "Error: removed element dosen't exists." << endl;
+            return;
+        } else {
+            slots[index].state = EntryType::DELETED;
+            --num;
+        }
+    }
+
+private:
+    // Entry Type enum class.
+    // Three mode:
+    //  ACTIVE       - Occupied by valid data
+    //  Empty        - Never been occupied or deleted.
+    //  DELETED      - Once occupied, but deleted now. In the furture, it can be ACTIVE again.
+    // 
+    enum struct EntryType {ACTIVE,EMPTY,DELETED};
+    // Entry tyoe structure
+    // I don't use T type as vector element directly. Create a new structure to record the state for convenience.
+    struct hashEntry{
+        T value;
+        EntryType state = EntryType::EMPTY;
+    };
+    // slots to collect all the entries.
+    vector<hashEntry> slots;
+    // ACTIVE entry number
+    unsigned num = 0;
+
+    // member hash function, use hashFunction function class template defined ahead.
+    // It use the same hashFunction function class template as Seperate Chaining Hash Table.
+    size_t hash(T val) const {
+        static hashFunction<T> hf;
+        return hf(val) % slots.size();
+    }
+
+    // Rehash
+    void rehash(unsigned newSize = 0) {
+        if (newSize == 0) newSize = slots.size() * 2 + 1;
+        auto oldSlots = slots;
+        slots = vector<hashEntry>(newSize);
+        num = 0;
+        for (auto &slot : oldSlots){
+            if (slot.state == EntryType::ACTIVE)
+                // Use std::move to make old element movable for better performance.
+                insert(std::move(slot.value));
+        }
+    }
+
+    // get the next position of access, using probing function to calculate.
+    size_t nextPosition(size_t initIndex, unsigned shift) const {
+        return (initIndex + probing(shift)) % slots.size();
+    }
+
+    // probing function pointer
+    size_t (*probing)(unsigned);
+};
 
 
 //
