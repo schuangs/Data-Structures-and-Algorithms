@@ -38,27 +38,27 @@ using std::priority_queue;
 //  Using std::chrono library and std::chrono::steady_clock as clock epoch.
 //
 //      pTime() to create a new counter.
-//      pStart():  Start counting.
+//      start():  Start counting.
 //      addPoint():  Add check points at this moment.
-//      pEnd():   Stop counting.
-//      pDuration():  Return the length of total duration in ms.
-//      pDisplay():   Quickly display the counting result.
+//      end():   Stop counting.
+//      duration():  Return the length of total duration in ms.
+//      display():   Quickly display the counting result.
 //
 class pTime{
     // alias
     using time_point_t = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
 private:
     // Member variables
-    time_point_t start; // Start of counting
-    time_point_t end;   // End of counting
+    time_point_t startTime; // Start of counting
+    time_point_t endTime;   // End of counting
     vector<time_point_t> points;    // Checkpoints during counting
     bool counting = false;  // Whether pTime is still running
 public:
     // Start couting
-    void pStart(){
+    void start(){
         points.clear();
         counting = true;
-        start = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
+        startTime = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now());
         return;
     }
     // Add check points during counting
@@ -71,42 +71,42 @@ public:
         return;
     }
     // End counting
-    void pEnd(){
+    void end(){
         points.push_back(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()));
         counting = false;
-        end = points.back();
+        endTime = points.back();
         return;
     }
-    // Return duration between start and end in millisecond.
-    int pDuration() const {
+    // Return duration between startTime and end in millisecond.
+    int duration() const {
         if ( counting == true ){
             cerr << "pTime is still counting !" << endl;
             return 0;
         }
-        return (end - start).count();
+        return (endTime - startTime).count();
     }
     // Display counting information
-    void pDisplay() const {
+    void display() const {
         if ( counting == true ){
             cerr << "pTime is still counting !" << endl;
             return;
         }
         // Display checkpoints
         for (auto i = 0; i < points.size(); ++i)
-            cout << "# " << i+1 << "    " << (points[i]-start).count() << " ms" << endl;
+            cout << "# " << i+1 << "    " << (points[i]-startTime).count() << " ms" << endl;
         // Display total time
-        cout << endl << "Running time:     " << (end - start).count() << " ms" << endl;
+        cout << endl << "Running time:     " << (endTime - startTime).count() << " ms" << endl;
         return;
     }
     // Return a list of checkpoints and end point
-    vector<int64_t> pList() const {
+    vector<int64_t> list() const {
         if (counting == true){
             cerr << "pTime is still counting !" << endl;
             return {};
         }
         vector<int64_t> list;
         for (auto i : points)
-            list.push_back((i-start).count());
+            list.push_back((i-startTime).count());
         return list;
     }
 };
@@ -1280,16 +1280,16 @@ void myTreeEvaluator(unsigned inputNum = 100, unsigned accessNum = 100, std::str
             tree.insert(i + 1); 
     }
     auto maxVal = tree.max(), minVal = tree.min();
-    pt.pStart();
+    pt.start();
     for (auto i = 0; i < accessNum; ++i){
         if (accessMode == "Random")
             tree.contain(rd());
         else if (accessMode == "Sequential")
             tree.contain((maxVal+minVal)/2 + 1);
     }
-    pt.pEnd();        
-    cout << "Total time for " << accessNum << " accesses: " << pt.pDuration() << " ms" << endl;
-    cout << "Mean access time: " << pt.pDuration()*1.0 / accessNum << " ms" << endl;
+    pt.end();        
+    cout << "Total time for " << accessNum << " accesses: " << pt.duration() << " ms" << endl;
+    cout << "Mean access time: " << pt.duration()*1.0 / accessNum << " ms" << endl;
 }
 
 
@@ -1576,6 +1576,148 @@ private:
 
     // probing function pointer
     size_t (*probing)(unsigned);
+};
+
+
+//
+// -------------------- Heap --------------------
+//
+
+
+//
+// Binary Heap:
+//  Using an std::vector to store heap elements.
+//  minimum heap implementation.
+//
+template <typename T>
+class myBinaryHeap{
+public:
+    myBinaryHeap() = default;
+    myBinaryHeap(const myBinaryHeap &rhs):
+        heap{rhs.heap}{}
+    
+    // use a vector as initialize list
+    // first push items regardless of the heap order
+    // then use buildHeap() to sort it.
+    explicit myBinaryHeap(const vector<T> &inputList) {
+        for (auto item : inputList)
+            heap.push_back(item);
+        buildHeap();
+    }
+    
+    bool empty() const {
+        return heap.size() == 1;
+    }
+
+    void clear() {
+        heap = std::vector<T>(1);
+    }
+
+    const T &findMin() const {
+        if (empty()) {
+            cerr << "Error: cannot get the minimum of empty heap." << endl;
+            return heap[0];
+        }
+        return heap[1];
+    }
+
+    unsigned getSize() const {
+        return heap.size() - 1;
+    }
+    
+    // insert routine:
+    // put new element at the end, then percolate up.
+    void insert(const T &val) {
+        // put new element at the front to make routine stop at index 1 naturally.
+        heap[0] = val;
+        heap.push_back(val);
+        percolateUp(heap.size() - 1);
+    }
+
+    void insert(T &&val) {
+        heap[0] = std::move(val);
+        heap.push_back(std::move(val));
+        percolateUp(heap.size() - 1);
+    }
+
+    // delete min routine:
+    // put element at the end into the root position, then percolate down.
+    void deleteMin() {
+        if (empty()) {
+            cerr << "Error: cannot delete minimum of empty heap." << endl;
+            return;
+        }
+        heap[1] = heap.back();
+        heap.pop_back();
+        percolateDown(1);
+    }
+
+private:
+    // use std::vector to implement instead of a tree fashion.
+    // reserve the first position for convenience.
+    std::vector<T> heap = std::vector<T>(1);
+
+    // percolate down/up routine.
+    void percolateDown(unsigned hole) {
+        while (true){
+            if (2*hole >= heap.size()) return;
+            if (2*hole+1 >= heap.size() && heap[2*hole] >= heap[hole]) return;
+            T childMin = std::min(heap[2*hole], heap[2*hole+1]);
+            if (childMin >= heap[hole]) return;
+            if (heap[2*hole] <= heap[2*hole+1]){
+                std::swap(heap[hole], heap[2*hole]);
+                hole *= 2;                
+            } else {
+                std::swap(heap[hole], heap[2*hole+1]);
+                hole = 2*hole+1;
+            }
+        }
+    }
+    void percolateUp(unsigned hole) {
+        while (true) {
+            if (hole == 0) return;
+            if (heap[hole] < heap[hole/2]){
+                std::swap(heap[hole], heap[hole/2]);
+                hole /= 2;
+            } else return;
+        }
+    }
+
+    // More operations
+    // decrease the value at position of a delta amount.
+    void decreaseKey(unsigned position, T delta) {
+        if (position < heap.size()){
+            cerr << "Error: cannot find the decrease position." << endl;
+            return;
+        }
+        heap[position] -= delta;
+        percolateUp(position);
+    }
+    // increase the value at position of a delta amount.
+    void increaseKey(unsigned position, T delta) {
+        if (position < heap.size()){
+            cerr << "Error: cannot find the increase position." << endl;
+            return;
+        }
+        heap[position] += delta;
+        percolateDown(position);
+    }
+
+    // remove element at position
+    void remove(unsigned position) {
+        while (position > 1){
+            std::swap(heap[position], heap[position/2]);
+            position /= 2;
+        }
+        deleteMin();
+    }
+
+    // buildHeap routine
+    void buildHeap() {
+        for (auto i = (heap.size())/2; i > 0; --i){
+            percolateDown(i);
+        }
+    }
 };
 
 

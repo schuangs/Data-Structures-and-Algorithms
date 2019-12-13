@@ -58,6 +58,11 @@ Seperate chaining hash table implementation.
 ### myProbingHashTable
 Probing hash table implementation.
 
+
+### myBinaryHeap
+A minimum heap (priority queue) implementation.
+Using `std::vector` to store values.
+
 ### myBubbleSort
 Bubble sort implementation.
 
