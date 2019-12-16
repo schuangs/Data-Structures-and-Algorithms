@@ -20,6 +20,7 @@
 # include <fstream>
 # include <random>
 # include <algorithm>
+# include <iomanip>
 
 using std::cin;
 using std::cout;
@@ -154,6 +155,59 @@ void mySwap (vector<T> &v, int a, int b) {
     }
     std::swap(v[a], v[b]);
     return;
+}
+
+
+//
+// Histogram:
+//  A simple histogram plot routine directly on terminal.
+//  ys should all be non-negtive;
+//
+template <typename X, typename Y>
+void myHist(vector<X> xs, vector<Y> ys, unsigned height = 20, unsigned gap = 8) {
+    // Test input validaty
+    if (xs.size() != ys.size()){
+        cerr << "Error: xs and ys have different size." << endl;
+        return;
+    }
+    for (auto i = 0; i < ys.size(); ++i){
+        if (ys[i] < 0){
+            cerr << "y should all be non-negtive." << endl;
+            return;
+        }
+    }
+    // Find range of y
+    Y ymax = ys[0];
+    for (auto i = 0; i < ys.size(); ++i)
+        ymax = std::max(ymax, ys[i]);
+    // use a 2-dimention vector to record pixels
+    vector<vector<bool>> content(height, vector<bool>(xs.size(), 0));
+    for (auto i = 0; i < xs.size(); ++i){
+        unsigned parts = static_cast<int>(height*1.0*ys[i]/ymax);
+        for (auto j = 0; j < parts; ++j)
+            content[height-1-j][i] = 1;
+    }
+
+    // output
+    for (auto i = 0; i < height; i++){
+        for (auto j = 0; j < gap; ++j) cout << " ";
+        for (auto j = 0; j < xs.size(); ++j){
+            if (content[i][j]){
+                cout << "*";
+                for (auto j = 0; j < gap-1; ++j) cout << " ";
+            } else{
+                for (auto j = 0; j < gap; ++j) cout << " ";
+            }
+        }
+        cout << "   |   " << ymax * (height-i)*1.0 / height << endl;
+    }
+    for (auto i = 0; i < xs.size()+1; ++i){
+        for (auto j = 0; j < gap; ++j) cout << "-";
+    }
+    cout << endl << " ";
+    for (auto i = 0; i < xs.size(); ++i)
+        cout << std::setw(gap) << xs[i];
+    cout << endl;
 }
 
 
@@ -1838,6 +1892,10 @@ private:
 
 //
 // -------------------- Sort --------------------
+//  Uniform interface:
+//    input:          an std::vector object reference
+//    output:         void
+//  Directly sort the array on the input reference.
 //
 
 //
@@ -1856,6 +1914,55 @@ void myBubbleSort(vector<T> &v) {
         if ( !swapped ) break;
     }
     return;
+}
+
+
+//
+// Insertion Sort:
+//
+template <typename T>
+void myInsertionSort(vector<T> &v) {
+    for (auto i = 1; i < v.size(); ++i){
+        auto j = i;
+        while (j > 0 && v[j] < v[j-1]){
+            std::swap(v[j], v[j-1]);
+            --j;
+        }
+    }
+}
+
+
+
+
+//
+// Sort Routine Evaluator:
+//  1. A routine to evaluate the performance of a sort function.
+//  2. Using int type.
+//  3. sort function should be passed in through function object.
+//
+template <typename sortClass>
+void sortEval(sortClass sort, unsigned inputNumLimit = 20000) {
+    vector<int> x;
+    vector<unsigned> y;
+    std::random_device rd;
+    pTime pt;
+
+    // start input num
+    int inputNum = 1000;
+    while (inputNum <= inputNumLimit){
+        vector<int> input;
+        for (auto i = 0; i < inputNum; ++i)
+            input.push_back(rd());
+        pt.start();
+        sort(input);
+        pt.end();
+        x.push_back(inputNum);
+        y.push_back(pt.duration());
+        // double input
+        inputNum *= 2;
+    }
+    // show in histogram
+    myHist(x, y, 50);
 }
 
 

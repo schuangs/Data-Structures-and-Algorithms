@@ -13,6 +13,10 @@ Print vector in various mode to given ostream object.
 Swap two elements in a vector.
 
 
+### myHist
+Draw histogram directly on terminal.
+
+
 ### myList
 Class template implementation of linked list. 
 But you cannot use iterator here. Use pointer to `myList<T>::node` instead.
@@ -70,6 +74,16 @@ Right most path is the shortest path.
 
 ### myBubbleSort
 Bubble sort implementation.
+
+
+### myInsertionSort
+Insertion sort implementation.
+
+
+
+### sortEval
+A routine to evaluate performance of sort function.
+Use `myHist()` to show result in histogram.
 
 
 ### Selection Problem
