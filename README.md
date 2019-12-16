@@ -80,6 +80,15 @@ Bubble sort implementation.
 Insertion sort implementation.
 
 
+### myShellSort
+Shell sort implementation. 
+Using Hibbard increment sequence.
+
+### myHeapSort
+Using heap to get the maximum element out one by one, then put them at the heap vector from back forward.
+No extra space needed.
+
+
 
 ### sortEval
 A routine to evaluate performance of sort function.

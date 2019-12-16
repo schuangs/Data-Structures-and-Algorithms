@@ -21,6 +21,7 @@
 # include <random>
 # include <algorithm>
 # include <iomanip>
+# include <cmath>
 
 using std::cin;
 using std::cout;
@@ -130,12 +131,12 @@ void myPrint(const Container &con, std::ostream &os = std::cout, string mode = "
     if ( mode == "Normal" ) {
         // "Normal" mode: print in the form as : [ a1, a2, a3, ... ]
         os << "[ ";
-        for (auto itr = con.begin(); itr != con.end(); ++itr)
+        for (auto itr = con.begin(); itr+1 != con.end(); ++itr)
             os << *itr << ", ";
         os << con.back() << " ]" << endl;
     } else if ( mode == "Vertical" ) {
         // "Vertical" mode: print each item at a line
-        for (auto itr = con.begin(); itr != con.end(); ++itr)
+        for (auto itr = con.begin(); itr+1 != con.end(); ++itr)
             os << *itr << endl;
         os << con.back() << endl;
     }
@@ -1715,7 +1716,11 @@ private:
     void percolateDown(unsigned hole) {
         while (true){
             if (2*hole >= heap.size()) return;
-            if (2*hole+1 >= heap.size() && heap[2*hole] >= heap[hole]) return;
+            if (2*hole+1 >= heap.size()){
+                if (heap[2*hole] >= heap[hole]) return;
+                else std::swap(heap[2*hole], heap[hole]);
+                return;
+            }            
             T childMin = std::min(heap[2*hole], heap[2*hole+1]);
             if (childMin >= heap[hole]) return;
             if (heap[2*hole] <= heap[2*hole+1]){
@@ -1932,6 +1937,78 @@ void myInsertionSort(vector<T> &v) {
 }
 
 
+
+//
+// Increment sequence candidates:
+//  Hibbard increment for shell sort next
+//
+unsigned incrementSequence(unsigned index) {
+    return pow(2,index)-1;
+}
+
+//
+// Shell Sort Routine:
+//  Using Hibbard increment as increment sequence
+//
+template<typename T>
+void myShellSort(vector<T> &v) {
+    unsigned index = 0;
+    while (incrementSequence(index) < v.size()) ++index;
+    --index;
+    while (index > 0){
+        unsigned gap = incrementSequence(index--);
+        for (auto i = gap; i < v.size(); ++i){
+            auto j = i;
+            while (j >= gap && v[j] < v[j-gap]){
+                std::swap(v[j], v[j-gap]);
+                j -= gap;
+            }
+        }
+    }
+}
+
+
+
+//
+// Heap Sort:
+//  1. Using input to buildHeap.
+//  2. Donnot require extra space to store sorted array.
+//
+
+//
+// Percolate down routine, just like it in binary heap implementation.
+// However, one more size variable should be passed in, 
+//   because v.size() may be difference with heap size.
+// And its a maximum heap.
+//
+void percolateDown(vector<int> &v, int i, int size) {
+    while (true){
+        if (2*i+1 >= size) return;
+        else if (2*i+2 >= size) {
+            if (v[i] < v[2*i+1])
+                std::swap(v[i], v[2*i+1]);
+            return;
+        } else {
+            if (v[2*i+1] >= v[2*i+2] && v[2*i+1] > v[i]){
+                std::swap(v[2*i+1], v[i]);
+                i = 2*i+1;
+            } else if (v[2*i+1] < v[2*i+2] && v[2*i+2] > v[i]){
+                std::swap(v[2*i+2], v[i]);
+                i = 2*i+2;
+            } else return;
+        }
+    }
+}
+template <typename T>
+void myHeapSort(vector<T> &v) {
+    // Build heap
+    for (int i = v.size()/2 - 1; i >= 0; --i)
+        percolateDown(v, i, v.size());
+    for (int i = 0; i < v.size(); ++i){
+        std::swap(v[0], v[v.size()-1-i]);
+        percolateDown(v, 0, v.size()-i-1); // size of heap is changed
+    }
+}
 
 
 //
