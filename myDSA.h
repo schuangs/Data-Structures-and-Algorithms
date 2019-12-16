@@ -163,9 +163,9 @@ void mySwap (vector<T> &v, int a, int b) {
 
 //
 //  Linked list implementation:
-//   Just one direction. And for briefness, I do not encapsulate node, and it is visible to users.
-//   In fact, I could make it more professional if I encapsulate node and create an iterator class for node reference.
-//   But that would cost heavier works. Maybe in the future!
+//   1. Just one direction. And for briefness, I do not encapsulate node, and it is visible to users.
+//   2. In fact, I could make it more professional if I encapsulate node and create an iterator class for node reference.
+//   3. But that would cost heavier works. Maybe in the future!
 //
 
 template <typename T>
@@ -524,10 +524,10 @@ std::string infix2Postfix(const string &infix) {
 
 //
 //  Expression Tree Implementation:
-//  Using myBinaryTreeNode template and use std::string to instantiate it
-//  In expression tree, leaf node contain operand strings and non-leaf node contain operators (in string).
-//  Expression public routines include three expression notation: prefix, infix, postfix
-//  By now, only support binary operators: +, -, *, /
+//  1. Using myBinaryTreeNode template and use std::string to instantiate it
+//  2. In expression tree, leaf node contain operand strings and non-leaf node contain operators (in string).
+//  3. Expression public routines include three expression notation: prefix, infix, postfix
+//  4. By now, only support binary operators: +, -, *, /
 //
 class myExpressionTree{
 public:
@@ -1261,8 +1261,8 @@ private:
 
 //
 //  A routine to evaluate the performance of a tree structure.
-//   Using pTime routine to measure the time it cost for a tree structure to finish a fixed process.
-//   inputNum is the number of random integers input.
+//   1. Using pTime routine to measure the time it cost for a tree structure to finish a fixed process.
+//   2. inputNum is the number of random integers input.
 //
 template <template<typename U> typename treeTemplate>
 void myTreeEvaluator(unsigned inputNum = 100, unsigned accessNum = 100, std::string inputMode = "Random", std::string accessMode = "Random") {
@@ -1331,9 +1331,9 @@ public:
 
 //
 //  Seperate Chaining Hash Table:
-//   Hash table using seperate chaining method to deal with collision.
-//   Use an std::list to record collided elements.
-//   And when load factor reach 0.5, rehash it to get better performance.
+//   1. Hash table using seperate chaining method to deal with collision.
+//   2. Use an std::list to record collided elements.
+//   3. When load factor reach 0.5, rehash it to get better performance.
 //
 template <typename T>
 class mySCHashTable {
@@ -1420,8 +1420,8 @@ private:
 
 //
 // Probing Hash Table
-//  Do not use seperate chaining method to deal with collision. Find another slot for collided element instead.
-//  Here inplement linear probing, quadratic probing.
+//  1. Do not use seperate chaining method to deal with collision. Find another slot for collided element instead.
+//  2. Here inplement linear probing, quadratic probing.
 //
 
 //
@@ -1586,8 +1586,8 @@ private:
 
 //
 // Binary Heap:
-//  Using an std::vector to store heap elements.
-//  minimum heap implementation.
+//  1. Using an std::vector to store heap elements.
+//  2. Minimum heap implementation.
 //
 template <typename T>
 class myBinaryHeap{
@@ -1721,6 +1721,121 @@ private:
 };
 
 
+
+//
+// Leftist Heap:
+//  1. Use linking nodes instead of a std::vector to store elements.
+//  2. Each node contains an npl(null path length) member 
+//      to record the minimum length of path to the descendant who don not have two children.
+//  3. nullptr is considered having npl = -1.
+//
+template <typename T>
+class myLeftistHeap{
+public:
+    myLeftistHeap() = default;
+    myLeftistHeap(const myLeftistHeap &rhs) {
+        root = clone(rhs.root);
+    }
+    ~myLeftistHeap() {
+        clear(root);
+    }
+
+    void clear() {
+        clear(root);
+    }
+    bool empty() const {
+        return root == nullptr;
+    }
+
+    const T &findMin() {
+        return root->value;
+    }
+
+    // Merge rhs to this, rhs will be cleared.
+    void merge(myLeftistHeap &rhs) {
+        // Test if rhs is the same leftist heap as this.
+        if (&rhs == this) return;
+        merge(root, rhs.root);
+    }
+
+    // Insertion can be regarded as merge this with a single node heap.
+    void insert(const T &val) {
+        node *newNode = new node{val, 0, nullptr, nullptr};
+        merge(root, newNode);
+    }
+    void insert(T &&val) {
+        node *newNode = new node{std::move(val), 0, nullptr, nullptr};
+        merge(root, newNode);
+    }
+
+    // Delete min operation can be implemented by deleting root and merging two children of it.
+    void deleteMin() {
+        merge(root->left, root->right);
+        node *newRoot = root->left;
+        delete root;
+        root = newRoot;
+    }
+
+private:
+    // Internal node structure
+    // npl is the null path length
+    struct node {
+        T value = {};
+        unsigned npl = 0;
+        node *left = nullptr;
+        node *right = nullptr;
+        node(const T &val, unsigned newNpl, node *l, node *r):
+            value{val}, npl{newNpl}, left(l), right(r){}
+        node(T &&val, unsigned newNpl, node *l, node *r):
+            value{val}, npl{newNpl}, left{l}, right{r}{}
+    };
+
+    // For nullptr, consider its npl = -1.
+    int getNPL(node *ptr) const {
+        if (ptr == nullptr) return -1;
+        return ptr->npl;
+    }
+
+    node *clone(node *ptr) {
+        if (ptr == nullptr) return nullptr;
+        return new node {ptr->value, clone(ptr->left), clone(ptr->right)};
+    }
+
+    void clear(node *&ptr) {
+        if (ptr == nullptr) return;
+        clear(ptr->left);
+        clear(ptr->right);
+        delete ptr;
+        ptr = nullptr;
+    }
+
+    // Real merge function
+    // Merge ptr2 to ptr1, and ptr2 will be set to nullptr.
+    void merge(node *&ptr1, node *&ptr2) {
+        if (ptr1 == nullptr){
+            ptr1 = ptr2;
+            ptr2 = nullptr;
+        } else if (ptr2 != nullptr){
+            if (ptr1->value > ptr2->value){
+                merge(ptr2->right, ptr1);
+                ptr1 = ptr2;
+                ptr2 = nullptr;
+            }
+            else
+                merge(ptr1->right, ptr2);
+            if (getNPL(ptr1->left) > getNPL(ptr1->right))
+                std::swap(ptr1->left, ptr1->right);
+            ptr1->npl = getNPL(ptr1->right) + 1;
+        }
+        // If ptr2 == nullptr, no thing need to do.
+    }
+
+    node *root = nullptr;
+};
+
+
+
+
 //
 // -------------------- Sort --------------------
 //
@@ -1764,8 +1879,8 @@ T mySelectionProblem1(const vector<T> &array, int k){
 
 //
 //  Brace checker:
-//  Check a file string object (e.g. extracted from a file) whether the braces are balanced ("(", "[", "{"). 
-//  Using a std::stack data structure
+//  1. Check a file string object (e.g. extracted from a file) whether the braces are balanced ("(", "[", "{"). 
+//  2. Using a std::stack data structure
 //
 void myBraceChecker(const string &fileName) {
     std::ifstream input(fileName);
@@ -1863,5 +1978,7 @@ double myPostfixCalculator(const string &postfix) {
 double myCalculator(const string &infix) {
     return myPostfixCalculator(infix2Postfix(infix));
 }
+
+
 
 # endif

@@ -63,6 +63,11 @@ Probing hash table implementation.
 A minimum heap (priority queue) implementation.
 Using `std::vector` to store values.
 
+### myLeftistHeap
+Leftist Heap implementation.
+Right most path is the shortest path.
+`merge()` function is vital.
+
 ### myBubbleSort
 Bubble sort implementation.
 
