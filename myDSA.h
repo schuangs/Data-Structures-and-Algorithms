@@ -2011,6 +2011,67 @@ void myHeapSort(vector<T> &v) {
 }
 
 
+
+
+//
+// Merge Sort:
+//
+
+//
+// 1. merge two parts of a std::vector in order
+// 2. Use a tmp std::vector to store tmp values.
+// 3. All calling use the same tmp vector, which saves space cost.
+//
+template <typename T>
+void merge(vector<T> &v, vector<T> &tmp, int leftStart, int rightStart, int rightEnd) {
+    int leftEnd = rightStart-1;
+    int tmpIndex = leftStart, i = leftStart;
+    while (tmpIndex <= rightEnd){
+        // If left or right part is running out
+        if (leftStart > leftEnd){
+            while (rightStart <= rightEnd)
+                std::swap(tmp[tmpIndex++], v[rightStart++]);
+        } else if (rightStart > rightEnd) {
+            while (leftStart <= leftEnd)
+                std::swap(tmp[tmpIndex++], v[leftStart++]);
+        } else {
+            // If neither is running out
+            if (v[leftStart] <= v[rightStart])
+                std::swap(tmp[tmpIndex++], v[leftStart++]);
+            else
+                std::swap(tmp[tmpIndex++], v[rightStart++]);
+        }
+    }
+    // Copy tmp values back to v
+    while (i <= rightEnd){
+        std::swap(tmp[i], v[i]);
+        ++i;
+    }
+}
+//
+// Merge sort iterating routine.
+//
+template <typename T>
+void mergeSort(vector<T> &v, vector<T> &tmp, int start, int end) {
+    if (start >= end) return;
+    int center = (start+end)/2;
+    mergeSort(v, tmp, start, center);
+    mergeSort(v, tmp, center+1, end);
+    merge(v, tmp, start, center+1, end);
+}
+//
+// Merge sort activate routine
+//  Create a tmp std::vector for common use.
+//
+template <typename T>
+void myMergeSort(vector<T> &v){
+    vector<T> tmp(v.size());
+    mergeSort(v,tmp,0, v.size()-1);
+}
+
+
+
+
 //
 // Sort Routine Evaluator:
 //  1. A routine to evaluate the performance of a sort function.

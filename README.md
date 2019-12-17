@@ -89,6 +89,11 @@ Using heap to get the maximum element out one by one, then put them at the heap 
 No extra space needed.
 
 
+### myMergeSort
+Merge sort implementation.
+Using a common temperary std::vector to store temperary values.
+Rather than creating one more vector each calling.
+
 
 ### sortEval
 A routine to evaluate performance of sort function.
