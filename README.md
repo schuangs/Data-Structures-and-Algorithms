@@ -95,6 +95,12 @@ Using a common temperary std::vector to store temperary values.
 Rather than creating one more vector each calling.
 
 
+### myQuickSort
+Classic quick sort implementation.
+Using a cutoff strategy, for small size input, use insertion sort.
+You are free to set the cutoff value.
+
+
 ### sortEval
 A routine to evaluate performance of sort function.
 Use `myHist()` to show result in histogram.

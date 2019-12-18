@@ -1936,6 +1936,22 @@ void myInsertionSort(vector<T> &v) {
     }
 }
 
+//
+// Partial insertion sort:
+//
+template <typename T>
+void myInsertionSort(vector<T> &v, int start, int end){
+    if (end - start < 1) return;
+    for (auto i = start+1; i <= end; ++i){
+        int j = i;
+        while (j > start && v[j] < v[j-1]){
+            std::swap(v[j], v[j-1]);
+            --j;
+        }
+    }
+}
+
+
 
 
 //
@@ -2021,6 +2037,7 @@ void myHeapSort(vector<T> &v) {
 // 1. merge two parts of a std::vector in order
 // 2. Use a tmp std::vector to store tmp values.
 // 3. All calling use the same tmp vector, which saves space cost.
+// 4. Merge sort has nearly the less times of comparisons.
 //
 template <typename T>
 void merge(vector<T> &v, vector<T> &tmp, int leftStart, int rightStart, int rightEnd) {
@@ -2067,6 +2084,60 @@ template <typename T>
 void myMergeSort(vector<T> &v){
     vector<T> tmp(v.size());
     mergeSort(v,tmp,0, v.size()-1);
+}
+
+
+
+//
+// Quick Sort:
+//  1. A classic implementation of quick sort algorithm.
+//  2. No any extra space needed.
+//  3. Details can impact quick sort performance greatly!
+//  4. For small vector (size <= cutoff), using insertion sort.
+//
+template<typename T>
+void myQuickSort(vector<T> &v, int start, int end, unsigned cutoff = 0){
+    // Base case
+    if (end - start < 1) return;
+
+    if (end - start >= cutoff){
+        // Median-of-Three Partitioning:
+        //  Sorting start, center and end elements, set median of them as the pivot.
+        int center = (start+end)/2;
+        if (v[start] > v[center])
+            std::swap(v[start], v[center]);
+        if (v[center] > v[end])
+            std::swap(v[center], v[end]);
+        if (v[start] > v[center])
+            std::swap(v[start], v[center]);
+        
+        // Move pivot to the second last position.
+        auto pivot = v[center];
+        std::swap(v[center], v[end-1]);
+        // Set i, j indexes
+        int i = start, j = end-1;
+        while (true){
+            while (v[i] < pivot) ++i;
+            while (v[j] > pivot) --j;
+            // When i and j meet, break.
+            if (i >= j) break;
+            // Swap i and j elements.
+            // Here the '++' and '--' is very important.
+            // Consider the case when :
+            //  v[i] = v[j] = pivot, i < j.
+            std::swap(v[i++], v[j--]);
+        }
+        // Move pivot to the middle.
+        std::swap(v[i], v[end-1]);
+        // Iteration.
+        myQuickSort(v, start, i-1);
+        myQuickSort(v, i+1, end);
+    } else myInsertionSort(v, start, end);
+}
+// Quick sort activation routine.
+template <typename T>
+void myQuickSort(vector<T> &v, unsigned cutoff = 0){
+    myQuickSort(v, 0, v.size() - 1, cutoff);
 }
 
 
