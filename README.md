@@ -106,6 +106,12 @@ A routine to evaluate performance of sort function.
 Use `myHist()` to show result in histogram.
 
 
+
+### myGraph
+Including:
+`topSort()`: top sort algorithms
+`minPathUnweighted()`: Find the minimum unweighted distance from start vertices to each vertices.
+
 ### Selection Problem
 
 **Input:** 	N numbers (not sorted)

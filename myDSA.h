@@ -14,6 +14,7 @@
 # include <queue>
 # include <stack>
 # include <map>
+# include <unordered_map>
 # include <ctime>
 # include <chrono>
 # include <iostream>
@@ -1935,7 +1936,6 @@ void myInsertionSort(vector<T> &v) {
         }
     }
 }
-
 //
 // Partial insertion sort:
 //
@@ -2174,6 +2174,191 @@ void sortEval(sortClass sort, unsigned inputNumLimit = 20000) {
     myHist(x, y, 50);
 }
 
+
+
+
+
+
+//
+// -------------------- Graph Theory --------------------
+//
+
+//
+// Two ways to store graph connection informations:
+//  1. Adjacent Matrix
+//  2. Adjacent List
+//
+
+// Inifinity
+const int INFINITE = 1000000001;
+
+//
+// Create structure of graph ADT
+//
+class myGraph{
+public:
+    myGraph() = default;
+    ~myGraph(){
+        clear();
+    }
+
+    bool empty() const {
+        return vertices.empty();
+    }
+    void clear() {
+        if (empty()) return;
+        for (auto name : vertices)
+            delete vMap[name];
+        vMap.clear();
+        vertices.clear();
+    }
+    // Using std::find
+    bool contain(std::string vName) const {
+        return std::find(vertices.begin(), vertices.end(), vName) != vertices.end();
+    }
+    unsigned getSize() const {
+        return vertices.size();
+    }
+
+    // add new vertex into the graph
+    void addVertex(std::string vName){
+        // vertices should have different names
+        if (contain(vName)){
+            cerr << "Name of new vertex already exists." << endl;
+            return;
+        }
+        vertex *newVertex = new vertex(vName);
+        vertices.push_back(vName);
+        vMap[vName] = newVertex;
+    }
+    // add new edge into the graph
+    void addEdge(std::string from, std::string to, int weight = 1) {
+        if (contain(from) && contain(to)){
+            vertex *ptr1 = vMap[from], *ptr2 = vMap[to];
+            (ptr1->adjList).push_back(std::pair<vertex*, int>(ptr2, weight));
+            ++(ptr2->indegree);
+        } else {
+            cerr << "Cannot find the vertices of new edge." << endl;
+            return;
+        }
+    }
+    // Print the graph as an array in order of order member.
+    void printInOrder() const {
+        std::vector<std::string> names(getSize());
+        for (std::string name : vertices){
+            const vertex *ptr = vMap.at(name);
+            names[ptr->order] = name;
+        }
+        myPrint(names);
+    }
+
+    // Print vertices and their distances in vertices order
+    void printDistance() const {
+        cout << "Distances:" << endl;
+        for (auto name : vertices){
+            vertex *ptr = vMap.at(name);
+            cout << ptr->name << ":  " << ptr->distance << endl;
+        }
+    }
+
+    //
+    // Top Sort:
+    //  Using std::queue to get vertex with zero indegree.
+    void topSort() {
+        if (empty()) return;
+        std::queue<vertex*> zeroIndegree;
+        // First scan through all vertices, find all vertices with zero indegree.
+        for (auto name : vertices){
+            auto ptr = vMap[name];
+            if (ptr->indegree == 0)
+                zeroIndegree.push(ptr);
+        }
+        // Then repeatly get a vertex with zero indegree and update its order
+        for (auto i = 0; i < getSize(); ++i){
+            // if all vertex have nonzero indegree, there is a cycle in the graph.
+            if (zeroIndegree.empty()) {
+                cerr << "Cycle found in the graph, top sort cannot be done." << endl;
+                return;
+            }
+            vertex *ptr = zeroIndegree.front();
+            zeroIndegree.pop();
+            ptr->order = i;
+            // update all indegrees
+            for (auto item: ptr->adjList){
+                auto toPtr = item.first;
+                --(toPtr->indegree);
+                if (toPtr->indegree == 0)
+                    zeroIndegree.push(toPtr);
+            }
+        }
+        // Restore all indegrees
+        restoreIndegree();
+    }
+
+    // Find the minimum unweighted distance from start vertices to each vertices 
+    // using a queue to process, so known data field is not needed.
+    void minPathUnweighted(std::string start){
+        // Initialize distances
+        for (auto name : vertices)
+            vMap[name]->distance = INFINITE;
+        // create queue and put start into it
+        std::queue<vertex *> q;
+        vertex *ptr = vMap[start];
+        ptr->distance = 0;
+        ptr->last = nullptr;
+        q.push(ptr);
+        // process all
+        while (!q.empty()){
+            ptr = q.front();
+            q.pop();
+            // put new vertices into the queue
+            for (auto item : ptr->adjList) {
+                vertex *next = item.first;
+                if (next->distance == INFINITE){
+                    next->distance = ptr->distance + 1;
+                    next->last = ptr;
+                    q.push(next);
+                }
+            }
+        }
+    }
+
+
+private:
+    struct vertex {
+        // order is auxiliary for some algoritms such as top sort.
+        // which is not essential for the vertex itself.
+        unsigned order = 0;
+        std::string name;
+        unsigned indegree = 0;
+
+        bool known = false;
+        // distance to start vertex, may be used in many algorithms
+        int distance = INFINITE;
+        // record the last vertex to it. to retrace the path.
+        vertex* last= nullptr;
+        // adjList contains the vertices linked and weights of the edges as pairs.
+        std::list<std::pair<vertex*, int>> adjList;
+        vertex(std::string vName): name(vName) {}
+    };
+
+    void restoreIndegree() {
+        // clear indegree
+        for (std::string name : vertices)
+            vMap[name]->indegree = 0;
+        // calculate new indegree
+        for (std::string name : vertices){
+            vertex *ptr = vMap[name];
+            for (auto item : ptr->adjList)
+                ++( (item.first) -> indegree );
+        }
+    }
+
+    // vertices to record names of all vertices
+    std::vector<std::string> vertices;
+    // map to find the pointer to the vertex structure
+    std::unordered_map<std::string, vertex*> vMap;
+};
 
 //
 // -------------------- Problems & Other Tools --------------------
