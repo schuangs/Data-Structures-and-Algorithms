@@ -112,10 +112,10 @@ Including:<br>
 `topSort()`: top sort algorithms<br>
 `minPathUnweighted()`: Find the minimum unweighted distance from start vertices to each vertices.<br>
 `minPathWeightedNegative()`:Find the minimum weighted distance from start vertex to each vertices<br>
-`Dijkstra()`: Dijkstra algorithm implementation. Without heap optimization.
-`DijkstraNoCycle()`: Improved Dijkstra algorithm for noncycle graph
-`maxFlow()`: Maximum net flow algorithm.
-`Prim()`: Prim algorithm for minimum spanning tree problem.
+`Dijkstra()`: Dijkstra algorithm implementation. Without heap optimization.<br>
+`DijkstraNoCycle()`: Improved Dijkstra algorithm for noncycle graph<br>
+`maxFlow()`: Maximum net flow algorithm.<br>
+`Prim()`: Prim algorithm for minimum spanning tree problem.<br>
 
 ### Selection Problem
 
