@@ -2194,10 +2194,24 @@ const int INFINITE = 1000000001;
 
 //
 // Create structure of graph ADT
+//  T is the type of edge weights
 //
+template<typename T>
 class myGraph{
 public:
     myGraph() = default;
+    // Copy constructor
+    myGraph(const myGraph &rhs) {
+        // Add vertices
+        for (std::string name : rhs.vertices)
+            addVertex(name);
+        // Add edges
+        for (std::string name : rhs.vertices){
+            vertex *ptr = (rhs.vMap).at(name);
+            for (auto item : ptr->adjList)
+                addEdge(name, item.first->name, item.second);
+        }
+    }
     ~myGraph(){
         clear();
     }
@@ -2220,6 +2234,21 @@ public:
         return vertices.size();
     }
 
+    //
+    // Whether there is an edge from one vertex to another
+    //
+    bool isLinked(std::string from, std::string to) const {
+        vertex *ptr = vMap.at(to);
+        bool found = false;
+        for (auto item : vMap.at(from)->adjList){
+            if (item.first == ptr){
+                found = true;
+                break;
+            }
+        }
+        return found;
+    }
+
     // add new vertex into the graph
     void addVertex(std::string vName){
         // vertices should have different names
@@ -2232,16 +2261,91 @@ public:
         vMap[vName] = newVertex;
     }
     // add new edge into the graph
-    void addEdge(std::string from, std::string to, int weight = 1) {
+    void addEdge(std::string from, std::string to, T weight = 0) {
         if (contain(from) && contain(to)){
             vertex *ptr1 = vMap[from], *ptr2 = vMap[to];
-            (ptr1->adjList).push_back(std::pair<vertex*, int>(ptr2, weight));
+            (ptr1->adjList).push_back(std::pair<vertex*, T>(ptr2, weight));
             ++(ptr2->indegree);
         } else {
             cerr << "Cannot find the vertices of new edge." << endl;
             return;
         }
     }
+
+    // Add two oposite edges between two vertices.
+    // Or you can consider them as a non_direction edge.
+    void addBiEdge(std::string v1, std::string v2, T weight = 0) {
+        addEdge(v1, v2, weight);
+        addEdge(v2, v1, weight);
+    }
+
+    //
+    //  Delete one edge
+    //
+    void deleteEdge(std::string from, std::string to) {
+        if (!isLinked(from, to)) return;
+        vertex *ptr = vMap[from];
+        for (auto &item : ptr->adjList){
+            if (item.first->name == to){
+                std::swap(item, (ptr->adjList).back());
+                (ptr->adjList).pop_back();
+                break;
+            }
+        }
+    }
+
+    // find the weight between two vertices
+    T findWeight(std::string from, std::string to) const {
+        vertex *ptr1 = vMap.at(from), *ptr2 = vMap.at(to);
+        for (auto item : ptr1->adjList){
+            if (item.first == ptr2) return item.second;
+        }
+        std::cerr << "Error: Edge not found." << std::endl;
+        return INFINITE;
+    }
+
+    // If no edge is found between thr two vertices, new edge is created.
+    void changeWeight(std::string from, std::string to, T newWeight){
+        // The two vertices should exist
+        if (contain(from) && contain(to)){
+            bool found = false;
+            for (auto &item : vMap[from]->adjList){
+                if (item.first == vMap[to]){
+                    found = true;
+                    item.second = newWeight;
+                    break;
+                }
+            }
+            // If not edge exist, create a new one.
+            if (!found) addEdge(from, to, newWeight);
+        } else {
+            cerr << "Cannot find the vertices." << endl;
+            return; 
+        }
+    }
+
+    //
+    // Increase weight with an amount of delta
+    //
+    void increaseWeight(std::string from, std::string to, T delta){
+        // The two vertices should exist
+        if (contain(from) && contain(to)){
+            bool found = false;
+            for (auto &item : vMap[from]->adjList){
+                if (item.first == vMap[to]){
+                    found = true;
+                    item.second += delta;
+                    break;
+                }
+            }
+            // If not edge exist, create a new one.
+            if (!found) addEdge(from, to, delta);
+        } else {
+            cerr << "Cannot find the vertices." << endl;
+            return; 
+        }
+    }
+
     // Print the graph as an array in order of order member.
     void printInOrder() const {
         std::vector<std::string> names(getSize());
@@ -2253,17 +2357,35 @@ public:
     }
 
     // Print vertices and their distances in vertices order
-    void printDistance() const {
-        cout << "Distances:" << endl;
-        for (auto name : vertices){
-            vertex *ptr = vMap.at(name);
-            cout << ptr->name << ":  " << ptr->distance << endl;
+    void printDistance(std::string destination = "All") const {
+        if (destination == "All"){
+            cout << "Distances:" << endl;
+            for (auto name : vertices){
+                vertex *ptr = vMap.at(name);
+                cout << ptr->name << ":  " << ptr->distance << endl;
+            }
+        } else {
+            vertex *ptr = vMap.at(destination);
+            cout << "Minimum distance to " << destination << " is " << ptr->distance << endl;
         }
+    }
+
+    // print the path from start to given vertex
+    void printPath(std::string destination) const {
+        std::vector<std::string> path;
+        vertex *ptr = vMap.at(destination);
+        while (ptr != nullptr){
+            path.push_back(ptr->name);
+            ptr = ptr->last;
+        }
+        for (auto i = path.size()-1; i != 0; --i)
+            cout << path[i] << " -> ";
+        cout << path[0] << endl;
     }
 
     //
     // Top Sort:
-    //  Using std::queue to get vertex with zero indegree.
+    // 1. Using std::queue to get vertex with zero indegree.
     void topSort() {
         if (empty()) return;
         std::queue<vertex*> zeroIndegree;
@@ -2295,8 +2417,8 @@ public:
         restoreIndegree();
     }
 
-    // Find the minimum unweighted distance from start vertices to each vertices 
-    // using a queue to process, so known data field is not needed.
+    // Find the minimum unweighted distance from start vertex to each vertices 
+    // 1. using a queue to process, so known data field is not needed.
     void minPathUnweighted(std::string start){
         // Initialize distances
         for (auto name : vertices)
@@ -2323,6 +2445,223 @@ public:
         }
     }
 
+    // Find the minimum weighted distance from start vertex to each vertices
+    // 1. Weight can be negative, but cannot have negative-cost cycle
+    // 2. known member indicate whether the vertex is in the queue
+    void minPathWeightedNegative(std::string start){
+        std::queue<vertex *> q;
+        // Initialize
+        for (auto name : vertices){
+            vertex *ptr = vMap[name];
+            ptr->distance = INFINITE;
+            ptr->known = false; // set false for all vertices
+        }
+        vertex *ptr = vMap[start];
+        // Initialize start vertex
+        ptr->last = nullptr;
+        ptr->distance = 0;
+        ptr->known = true; // set true to push vertex into queue
+        q.push(ptr);
+        while (!q.empty()){
+            ptr = q.front();
+            q.pop();
+            // set false to pop vertex out
+            ptr->known = false;
+            for (auto item : ptr->adjList){
+                vertex * next = item.first;
+                if (next->distance > ptr->distance + item.second){
+                    next->last = ptr;
+                    next->distance = ptr->distance + item.second;
+                    if (next->known == false){
+                        // set true to push vertex
+                        next->known = true;
+                        q.push(next);
+                    }
+                }
+            }
+        }
+    }
+
+    // Dijkstra Algorithm
+    // 1. Without heap optimization
+    // 2. Non-negative cost 
+    // 3. mode = "min" or "max" determine to find the minimum distance of maximum distance.
+    void Dijkstra(std::string start, std::string mode = "min") {
+        // Initialize all vertices
+        for (auto name : vertices){
+            vertex *ptr = vMap[name];
+            ptr->known = false;
+            ptr->last = nullptr;
+            if (mode == "min")
+                ptr->distance = INFINITE;
+            else if (mode == "max")
+                ptr->distance = 0;
+        }
+        // Initialize start vertex
+        vertex *ptr = vMap[start];
+        ptr->distance = 0;
+
+        for (auto i = 0; i < getSize(); ++i){
+            // Find the minimum/maximum distance of all unknown vertices
+            // minDis is just a representative, may really mean max distance.
+            T minDis;
+            if (mode == "min")
+                minDis = INFINITE;
+            else if (mode == "max")
+                minDis = 0;
+            vertex *minPtr = ptr;
+            for (auto name : vertices){
+                ptr = vMap[name];
+                if (ptr->known == false && ((mode == "min" && ptr->distance < minDis) || (mode == "max" && ptr->distance > minDis))){
+                    minDis = ptr->distance;
+                    minPtr = ptr;
+                }
+            }
+            minPtr->known = true;
+            // Update all vertices adjacent to minimum vertex
+            for (auto item : minPtr->adjList){
+                ptr = item.first;
+                if (ptr->known == false && ((mode == "min" && minDis + item.second < ptr->distance) || (mode == "max" && minDis + item.second > ptr->distance))){
+                    ptr->distance = minDis + item.second;
+                    ptr->last = minPtr;
+                }
+            }
+        }
+    }
+
+
+    // Dijkstra Algorithhm
+    // 1. No cycle allowed
+    void DijkstraNoCycle(std::string start, std::string mode = "min"){
+        topSort();
+        std::vector<vertex *> fetchList(getSize());
+        // Initialize vertices
+        for (auto name : vertices){
+            vertex *ptr = vMap[name];
+            ptr->known = false;
+            ptr->last = nullptr;
+            if (mode == "min")
+                ptr->distance = INFINITE;
+            else if (mode == "max")
+                ptr->distance = 0;
+            fetchList[ptr->order] = ptr;
+        }
+        // Initialize start vertex
+        vMap[start]->distance = 0;
+        // Update related vertices
+        for (vertex *ptr : fetchList){
+            ptr->known = true;
+            for (auto item : ptr->adjList){
+                vertex *next = item.first;
+                if (next->known == true) continue;
+                if (mode == "min"){
+                    if (next->distance > ptr->distance + item.second){
+                        next->distance = ptr->distance + item.second;
+                        next->last = ptr;
+                    }
+                } else if (mode == "max"){
+                    if (next->distance < ptr->distance + item.second){
+                        next->distance = ptr->distance + item.second;
+                        next->last = ptr;
+                    }
+                }
+            }
+        }
+    }
+
+    //
+    // Maximum Net Flow Algorithm:
+    // 1. Using Dijkstra to find paths of residual graph.
+    //
+    T maxFlow(std::string start, std::string finish) const {
+        T maxFlow = 0;
+        // Create residual graph
+        myGraph res(*this);
+        vertex *resFinish = (res.vMap).at(finish);
+        while (true){
+            // Using Dijkstra to find a path from start to finish
+            res.Dijkstra(start);
+            // If no path found, break.
+            if (resFinish->distance == INFINITE) break;
+            // Else, increase flow and update residual graph.
+            std::vector<vertex *> increasePath;
+            T increaseFlow = INFINITE;
+            vertex *ptr = resFinish;
+            // Find the maximum increase flow
+            while (ptr->last != nullptr){
+                increasePath.push_back(ptr);
+                increaseFlow = std::min(increaseFlow, res.findWeight(ptr->last->name, ptr->name));
+                ptr = ptr->last;
+            }
+            increasePath.push_back(ptr);
+            maxFlow += increaseFlow;
+            // Update residual graph
+            for (int i = increasePath.size() - 1; i != 0; --i){
+                std::string from = increasePath[i-1]->name;
+                std::string to = increasePath[i]->name;
+                // Redistribute the weight
+                res.increaseWeight(to, from, -increaseFlow);
+                res.increaseWeight(from, to, increaseFlow);
+                // If weight of an edge is 0, the edge should be deleted
+                // Otherwise Dijkstra will allways find the same path with 0 increase flow.
+                if (res.findWeight(to, from) == 0)
+                    res.deleteEdge(to, from);
+                if (res.findWeight(from, to) == 0)
+                    res.deleteEdge(from, to);
+            }
+        }
+        return maxFlow;
+        // The end of maxFlow routine
+    }
+
+
+    //
+    // Prim Algorithm:
+    // 1. Each vertex is connected to its last field of the spanning tree.
+    // 2. Return the sum of weight of the tree.
+    // 3. distance represent the minimum distance from the vertex to known vertices.
+    //
+    T Prim() {
+        T minSize = 0;
+        // Initialize all vertices
+        for (auto name : vertices){
+            vertex *ptr = vMap[name];
+            ptr->last = nullptr;
+            ptr->distance = INFINITE;
+            ptr->known = false;
+        }
+        // Set the first vertex in vertices as start
+        vMap[vertices.front()]->distance = 0;
+        
+        // Add vertices into the tree
+        for (auto i = 0; i < getSize(); ++i){
+            // Find the minimum distance unknown vertex
+            T minDis = INFINITE;
+            vertex *minPtr;
+            for (auto name : vertices){
+                vertex *ptr = vMap[name];
+                if (ptr->known == true) continue;
+                if (ptr->distance < minDis){
+                    minDis = ptr->distance;
+                    minPtr = ptr;
+                }
+            }
+            minPtr->known = true;
+            minSize += minDis;
+            // Update adjacent vertices
+            for (auto item : minPtr->adjList){
+                vertex *ptr = item.first;
+                if (ptr->known == true) continue;
+                if (ptr->distance > item.second){
+                    ptr->last = minPtr;
+                    ptr->distance = item.second;
+                }
+            }
+        }
+        return minSize;
+    }
+
+
 
 private:
     struct vertex {
@@ -2334,11 +2673,11 @@ private:
 
         bool known = false;
         // distance to start vertex, may be used in many algorithms
-        int distance = INFINITE;
+        T distance = INFINITE;
         // record the last vertex to it. to retrace the path.
         vertex* last= nullptr;
         // adjList contains the vertices linked and weights of the edges as pairs.
-        std::list<std::pair<vertex*, int>> adjList;
+        std::list<std::pair<vertex*, T>> adjList;
         vertex(std::string vName): name(vName) {}
     };
 

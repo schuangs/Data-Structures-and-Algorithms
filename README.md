@@ -108,9 +108,14 @@ Use `myHist()` to show result in histogram.
 
 
 ### myGraph
-Including:
-`topSort()`: top sort algorithms
-`minPathUnweighted()`: Find the minimum unweighted distance from start vertices to each vertices.
+Including:<br>
+`topSort()`: top sort algorithms<br>
+`minPathUnweighted()`: Find the minimum unweighted distance from start vertices to each vertices.<br>
+`minPathWeightedNegative()`:Find the minimum weighted distance from start vertex to each vertices<br>
+`Dijkstra()`: Dijkstra algorithm implementation. Without heap optimization.
+`DijkstraNoCycle()`: Improved Dijkstra algorithm for noncycle graph
+`maxFlow()`: Maximum net flow algorithm.
+`Prim()`: Prim algorithm for minimum spanning tree problem.
 
 ### Selection Problem
 
