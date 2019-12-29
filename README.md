@@ -106,6 +106,10 @@ A routine to evaluate performance of sort function.
 Use `myHist()` to show result in histogram.
 
 
+### myDisjSets
+Disjoint set class. An compact and nice implementation of `union` and `find` function.<br>
+Used in Kruskal algorithm.
+
 
 ### myGraph
 Including:<br>
@@ -116,6 +120,7 @@ Including:<br>
 `DijkstraNoCycle()`: Improved Dijkstra algorithm for noncycle graph<br>
 `maxFlow()`: Maximum net flow algorithm.<br>
 `Prim()`: Prim algorithm for minimum spanning tree problem.<br>
+`Kruskal()`: Kruskal algorithm.<br>
 
 ### Selection Problem
 

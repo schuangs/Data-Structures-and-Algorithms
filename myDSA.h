@@ -2175,6 +2175,41 @@ void sortEval(sortClass sort, unsigned inputNumLimit = 20000) {
 }
 
 
+//
+// -------------------- Disjoint Set --------------------
+//
+
+//
+// Disjoint Sets:
+//  1. Union by size.
+//  2. Path compression of find routine.
+//
+class myDisjSets{
+public:
+    explicit myDisjSets(int size):
+        s(size, -1){}
+    // Find the root index of given element index x
+    int find(int x) const {
+        return (s[x] < 0) ? x : find(s[x]);
+    }
+    // Path Compression find:
+    int find(int x) {
+        return (s[x] < 0) ? x : s[x] = find(s[x]);
+    }
+    // Union two disjoint sets, union by size.
+    void unionSets(int root1, int root2) {
+        if (s[root1] < s[root2]){
+            s[root1] += s[root2];
+            s[root2] = root1;
+        } else {
+            s[root2] += s[root1];
+            s[root1] = root2;
+        }
+    }
+private:
+    std::vector<int> s;
+};
+
 
 
 
@@ -2258,6 +2293,7 @@ public:
         }
         vertex *newVertex = new vertex(vName);
         vertices.push_back(vName);
+        newVertex->index = vertices.size()-1;
         vMap[vName] = newVertex;
     }
     // add new edge into the graph
@@ -2614,15 +2650,75 @@ public:
         // The end of maxFlow routine
     }
 
-
     //
     // Prim Algorithm:
-    // 1. Each vertex is connected to its last field of the spanning tree.
-    // 2. Return the sum of weight of the tree.
-    // 3. distance represent the minimum distance from the vertex to known vertices.
+    // 1. return a std::vector<edge> contains the edges of the minimum spanning tree.
+    // 2. distance represent the minimum distance from the vertex to known vertices.
+    // 3. No Direction Graph
     //
-    T Prim() {
-        T minSize = 0;
+    void Prim() {
+        std::vector<edge> edges = myPrim();
+        printConnect(edges);
+    }
+
+    //
+    // Kruskal Algorithm:
+    //  1. Using myDisjSets class
+    //  2. No Direction Graph
+    //
+    void Kruskal() const {
+        std::vector<edge> edges = myKruskal();
+        printConnect(edges);
+    }
+
+
+private:
+    struct vertex {
+        // order is auxiliary for some algoritms such as top sort.
+        // which is not essential for the vertex itself.
+        unsigned order = 0;
+        std::string name;
+        unsigned indegree = 0;
+        int index = 0; // index in this->vertices
+        bool known = false;
+        // distance to start vertex, may be used in many algorithms
+        T distance = INFINITE;
+        // record the last vertex to it. to retrace the path.
+        vertex* last= nullptr;
+        // adjList contains the vertices linked and weights of the edges as pairs.
+        std::list<std::pair<vertex*, T>> adjList;
+        vertex(std::string vName): name(vName) {}
+    };
+
+    struct edge {
+        int from;
+        int to;
+        T weight;
+        edge(int f, int t, T w):
+            from{f}, to{t}, weight{w}{}
+    };
+
+    struct edgeComp {
+        bool operator()(const edge &e1, const edge &e2) const {
+            return e1.weight > e2.weight;
+        }
+    };
+
+    void restoreIndegree() {
+        // clear indegree
+        for (std::string name : vertices)
+            vMap[name]->indegree = 0;
+        // calculate new indegree
+        for (std::string name : vertices){
+            vertex *ptr = vMap[name];
+            for (auto item : ptr->adjList)
+                ++( (item.first) -> indegree );
+        }
+    }
+
+    // Real Prim of public Prim routine
+    std::vector<edge> myPrim() {
+        std::vector<edge> linkedEdges;
         // Initialize all vertices
         for (auto name : vertices){
             vertex *ptr = vMap[name];
@@ -2632,7 +2728,6 @@ public:
         }
         // Set the first vertex in vertices as start
         vMap[vertices.front()]->distance = 0;
-        
         // Add vertices into the tree
         for (auto i = 0; i < getSize(); ++i){
             // Find the minimum distance unknown vertex
@@ -2647,7 +2742,8 @@ public:
                 }
             }
             minPtr->known = true;
-            minSize += minDis;
+            if (minPtr->last != nullptr)
+                linkedEdges.push_back(edge{minPtr->index, minPtr->last->index, minDis});
             // Update adjacent vertices
             for (auto item : minPtr->adjList){
                 vertex *ptr = item.first;
@@ -2658,39 +2754,49 @@ public:
                 }
             }
         }
-        return minSize;
+        return linkedEdges;
     }
 
-
-
-private:
-    struct vertex {
-        // order is auxiliary for some algoritms such as top sort.
-        // which is not essential for the vertex itself.
-        unsigned order = 0;
-        std::string name;
-        unsigned indegree = 0;
-
-        bool known = false;
-        // distance to start vertex, may be used in many algorithms
-        T distance = INFINITE;
-        // record the last vertex to it. to retrace the path.
-        vertex* last= nullptr;
-        // adjList contains the vertices linked and weights of the edges as pairs.
-        std::list<std::pair<vertex*, T>> adjList;
-        vertex(std::string vName): name(vName) {}
-    };
-
-    void restoreIndegree() {
-        // clear indegree
-        for (std::string name : vertices)
-            vMap[name]->indegree = 0;
-        // calculate new indegree
-        for (std::string name : vertices){
-            vertex *ptr = vMap[name];
-            for (auto item : ptr->adjList)
-                ++( (item.first) -> indegree );
+    // Real Kruskal of public Kruskal routine
+    std::vector<edge> myKruskal() const {
+        // Create edge priority queue, using edge and edgeComp object
+        std::priority_queue<edge, std::vector<edge>, edgeComp> pq;
+        for (auto name : vertices){
+            vertex *ptr = vMap.at(name);
+            for (auto item : ptr->adjList){
+                vertex *next = item.first;
+                pq.push(edge{ptr->index, next->index, item.second});
+            }
         }
+
+
+        std::vector<edge> linkedEdges;
+        myDisjSets ds(getSize());   // Disjoint sets object
+        for (auto i = 0; i < getSize()-1; ++i){
+            int index1, index2;
+            edge e = pq.top();
+            // Find two vertices that are not connected
+            do {
+                e = pq.top();
+                pq.pop();
+                index1 = e.from;
+                index2 = e.to;
+            } while (ds.find(index1) == ds.find(index2));
+            linkedEdges.push_back(e);
+            // Connect the two parts
+            ds.unionSets(ds.find(index1), ds.find(index2));
+        }
+        return linkedEdges;
+    }
+
+    // A show routine to print edges, used in public Prim and Kruskal routines
+    void printConnect(const std::vector<edge> &linkedEdges) const {
+        T totalSize = 0;
+        for (auto e : linkedEdges){
+            std::cout << vertices[e.from] << " -> " << vertices[e.to] << " : w = " << e.weight << std::endl; 
+            totalSize += e.weight;
+        }
+        std::cout << "Total size: " << totalSize << std::endl;
     }
 
     // vertices to record names of all vertices
